@@ -8,9 +8,9 @@ export async function signUp({ email, password, username, displayName }) {
     options: {
       data: {
         username: username?.trim() || null,
-        display_name: displayName?.trim() || username?.trim() || 'New user',
-      },
-    },
+        display_name: displayName?.trim() || username?.trim() || 'New user'
+      }
+    }
   });
   if (error) throw error;
   return data;
@@ -19,7 +19,7 @@ export async function signUp({ email, password, username, displayName }) {
 export async function signIn({ email, password }) {
   const { data, error } = await requireSupabase().auth.signInWithPassword({
     email: email.trim(),
-    password,
+    password
   });
   if (error) throw error;
   return data;
@@ -43,19 +43,38 @@ export function onAuthStateChange(callback) {
   return () => data.subscription.unsubscribe();
 }
 
+export async function getMyProfile() {
+  const client = requireSupabase();
+  const { data: authData, error: authError } = await client.auth.getUser();
+  if (authError) throw authError;
+  if (!authData.user) throw new Error('Please sign in to view your profile.');
+
+  const { data, error } = await client
+    .from('profiles')
+    .select('id, username, display_name, avatar_url, bio, created_at, updated_at')
+    .eq('id', authData.user.id)
+    .single();
+  if (error) throw error;
+  return data;
+}
+
 export async function updateMyProfile(updates) {
   const allowed = {};
   if (typeof updates.display_name === 'string') allowed.display_name = updates.display_name.trim();
-  if (typeof updates.username === 'string') allowed.username = updates.username.trim();
+  if (typeof updates.username === 'string') allowed.username = updates.username.trim() || null;
   if (typeof updates.bio === 'string') allowed.bio = updates.bio.trim();
   if (typeof updates.avatar_url === 'string' || updates.avatar_url === null) {
     allowed.avatar_url = updates.avatar_url;
+  }
+  if (!Object.keys(allowed).length) throw new Error('There are no profile changes to save.');
+  if (allowed.display_name !== undefined && !allowed.display_name) {
+    throw new Error('Display name cannot be empty.');
   }
 
   const { data, error } = await requireSupabase()
     .from('profiles')
     .update(allowed)
-    .select()
+    .select('id, username, display_name, avatar_url, bio, created_at, updated_at')
     .single();
   if (error) throw error;
   return data;
