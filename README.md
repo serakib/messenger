@@ -15,7 +15,8 @@ The app is built with Vite and deployed to GitHub Pages from the `main` branch.
 - Contact search and All / Unread / Groups filters
 - Working local pin, mute and archive controls
 - Local demo message history persisted in the browser
-- Account sign-up/sign-in UI
+- Email/password sign-up and sign-in
+- Phone-number sign-in and sign-up UI with SMS OTP verification (requires a configured Supabase SMS provider)
 - Supabase profile discovery, direct conversations and group conversations when configured
 - Supabase message history and Realtime message inserts
 - Private attachment upload and signed download links (10 MB maximum)
