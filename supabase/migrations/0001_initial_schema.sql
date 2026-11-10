@@ -184,6 +184,7 @@ create policy "Conversation creators can add members"
   with check (public.is_conversation_creator(conversation_id));
 
 drop policy if exists "Creators or members can leave" on public.conversation_members;
+drop policy if exists "Users can update their own read position" on public.conversation_members;
 create policy "Users can update their own read position"
   on public.conversation_members for update to authenticated
   using (user_id = (select auth.uid()))
