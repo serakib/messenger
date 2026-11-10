@@ -691,8 +691,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, a:focus-visib
 .auth-input input::placeholder { color: var(--muted); }
 .backend-status { display: flex; align-items: center; gap: 7px; margin: 14px 0; color: var(--muted); font-size: 9px; }
 .status-dot.offline { width: 7px; height: 7px; border-radius: 50%; background: #e1a64c; }
-.auth-demo-note { display: flex; align-items: flex-start; gap: 7px; margin-top: 16px; color: var(--muted); font-size: 9px; line-height: 1.5; }
-.auth-demo-note svg { flex: 0 0 auto; color: var(--accent-strong); }
+
 .auth-switch { margin-top: 15px; color: var(--muted); font-size: 9px; text-align: center; }
 .auth-switch button { padding: 0; border: 0; color: var(--accent-strong); background: transparent; font-size: inherit; font-weight: 700; }
 .auth-loading { margin: auto; display: flex; flex-direction: column; align-items: center; gap: 10px; color: var(--muted); font-size: 11px; }
@@ -741,8 +740,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, a:focus-visib
 .call-controls .end-call { color: #fff; background: #e34f5f; transform: rotate(135deg); }
 .toast { position: fixed; left: 50%; bottom: 22px; z-index: 90; min-height: 39px; display: flex; align-items: center; gap: 8px; padding: 0 13px; border: 1px solid var(--line); border-radius: 10px; color: var(--text); background: var(--panel-raised); box-shadow: var(--shadow); font-size: 10px; transform: translateX(-50%); animation: toast-in .2s ease both; }
 .toast svg { color: #25d366; }
-.demo-label { position: fixed; right: 13px; bottom: 9px; z-index: 12; display: flex; align-items: center; gap: 6px; padding: 4px 7px; border: 1px solid var(--line); border-radius: 6px; color: var(--muted); background: var(--panel-raised); font-size: 7px; font-weight: 700; letter-spacing: .8px; opacity: .76; pointer-events: none; }
-.demo-label span { width: 5px; height: 5px; border-radius: 50%; background: #e1a64c; }
+
 .welcome-panel { width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 25px; text-align: center; }
 .welcome-art { position: relative; width: 120px; height: 120px; display: grid; place-items: center; margin-bottom: 23px; border: 1px solid var(--line); border-radius: 35px; background: var(--panel-raised); box-shadow: 0 15px 45px rgba(0,0,0,.10); }
 .welcome-orbit { width: 74px; height: 74px; display: grid; place-items: center; color: #fff; background: #00a884; border-radius: 24px; box-shadow: 0 10px 28px rgba(0,168,132,.24); }
@@ -768,7 +766,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, a:focus-visib
   .chat-header { padding: 0 14px; }
   .messages-scroll { padding-left: 18px; padding-right: 18px; }
   .message-line { max-width: 86%; }
-  .demo-label { display: none; }
+
 }
 @media (max-width: 680px) {
   .app-shell, .app-shell.has-details { display: block; width: 100%; height: 100dvh; min-height: 0; overflow: hidden; }
@@ -823,7 +821,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, a:focus-visib
   .app-shell.has-details .details-panel { display: flex; }
   .details-heading { min-height: 56px; }
   .profile-card { padding-top: 20px; }
-  .demo-label { display: none; }
+
   .toast { bottom: 73px; max-width: calc(100vw - 24px); white-space: nowrap; }
   .modal-backdrop { padding: 10px; }
   .modal-card { padding: 16px; }
