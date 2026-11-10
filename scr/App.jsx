@@ -128,7 +128,7 @@ function mapConversation(conversation, userId) {
     preview: latest?.body || latest?.attachment_name || 'No messages yet',
     time: formatRelative(latest?.created_at || conversation.updated_at),
     latestAt: latest?.created_at || conversation.updated_at,
-    unread: Boolean(latest?.created_at && conversation.lastReadAt && new Date(latest.created_at) > new Date(conversation.lastReadAt) && latest.sender_id !== userId),
+    unread: Boolean(latest?.created_at && latest.sender_id !== userId && (!conversation.lastReadAt || new Date(latest.created_at) > new Date(conversation.lastReadAt))),
     lastReadAt: conversation.lastReadAt
   };
 }
@@ -334,7 +334,7 @@ function App() {
       });
     try {
       unsubscribe = subscribeToMessages(selectedId, incoming => {
-        setLiveChats(previous => previous.map(item => String(item.id) === String(selectedId) ? { ...item, preview: incoming.body || incoming.attachment_name || 'Attachment', time: formatRelative(incoming.created_at), latestAt: incoming.created_at, unread: incoming.sender_id !== currentUserId } : item));
+        setLiveChats(previous => previous.map(item => String(item.id) === String(selectedId) ? { ...item, preview: incoming.body || incoming.attachment_name || 'Attachment', time: formatRelative(incoming.created_at), latestAt: incoming.created_at, unread: false } : item));
         setLiveMessages(previous => {
           const existing = previous[selectedId] || [];
           if (existing.some(item => item.id === incoming.id)) return previous;
