@@ -1,26 +1,51 @@
 # Orbit — Messenger
 
-Orbit is a React-based messaging application prototype. The current release is a **frontend demo**, not yet a live messaging service.
+Orbit is a mobile-responsive React messenger interface with a local demo mode and an optional Supabase-backed account and messaging flow.
 
 ## Live deployment
 
-The app is built with Vite and deployed to GitHub Pages from the `main` branch. GitHub Pages hosting is free for public repositories.
+https://serakib.github.io/messenger/
 
-## Current features
+The app is built with Vite and deployed to GitHub Pages from the `main` branch.
 
-- Responsive inbox and conversation layout
-- Demo contacts and seeded conversations
-- Local in-memory message sending
-- Contact details, people, calls, notifications and settings previews
-- Light/dark theme and mobile layout
+## Available in the current release
 
-## Backend foundation
+- WhatsApp-inspired three-column workspace with a mobile conversation view
+- Default dark theme, with a light-theme option
+- Contact search and All / Unread / Groups filters
+- Working local pin, mute and archive controls
+- Local demo message history persisted in the browser
+- Account sign-up/sign-in UI
+- Supabase profile discovery and direct conversations when configured
+- Supabase message history and Realtime message inserts
+- Private attachment upload and signed download links (10 MB maximum)
+- Contact details, profile editing, settings, keyboard shortcuts and responsive navigation
 
-Supabase client configuration and service modules are included for Auth, profiles, conversations, messages, realtime message inserts and private attachment uploads. The current React interface is not yet connected to these services. Follow [the setup guide](docs/FREE_HOSTING_SETUP.md) when you are ready to create a Supabase project.
+## Backend setup
 
-## Important limitations
+The repository includes the SQL schema, Supabase client, Auth helpers and chat services. To activate real accounts and cross-device messaging:
 
-The current app does **not** yet provide real accounts, server-side message delivery, durable message history, file uploads, push notifications, real voice/video calls, or end-to-end encryption. Demo contacts and messages are hard-coded. Messages sent in the UI are lost on refresh. Do not use this prototype for private or sensitive communication.
+1. Create a Supabase project.
+2. Run `supabase/migrations/0001_initial_schema.sql`.
+3. Run `supabase/migrations/0002_message_attachments.sql`.
+4. Add `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` as GitHub Actions repository Variables.
+5. Set the Supabase Auth Site URL and Redirect URL to `https://serakib.github.io/messenger/`.
+
+See [the complete setup guide](docs/FREE_HOSTING_SETUP.md).
+
+Never put a Supabase service-role key in browser code or GitHub Pages.
+
+## Not yet implemented
+
+- Audio/video calling
+- Browser push notifications
+- End-to-end encryption
+- Typing indicators and online presence
+- Group creation and group administration
+- Message editing/deletion, reactions and reply threads
+- A production moderation/reporting workflow
+
+The sample contacts are fictional demo data. Until Supabase is configured and users sign in, messages are stored only in the current browser. Do not use demo mode for private or sensitive communication.
 
 ## Development
 
@@ -29,13 +54,7 @@ Requirements: Node.js LTS.
 ```bash
 npm install
 npm run dev
-```
-
-Create a production build:
-
-```bash
 npm run build
-npm run preview
 ```
 
 ## Project structure
@@ -48,18 +67,9 @@ npm run preview
 ├── scr/
 │   ├── App.jsx
 │   ├── main.jsx
-│   └── styles.css
+│   ├── styles.css
+│   ├── lib/
+│   └── services/
+├── supabase/migrations/
 └── .github/workflows/static.yml
 ```
-
-## Free-first roadmap
-
-1. Keep the frontend on GitHub Pages.
-2. Add Supabase Auth for email-based accounts.
-3. Add PostgreSQL tables and Row Level Security for profiles, conversations, memberships and messages.
-4. Add Supabase Realtime for message updates and presence.
-5. Add Supabase Storage with private buckets and strict policies for attachments.
-6. Add reporting, blocking, rate limits and account controls.
-7. Evaluate WebRTC calling separately; reliable global calling may require paid TURN infrastructure.
-
-Supabase free-plan quotas and inactivity/pause policies can change. A free tier is suitable for a small project or prototype, not a guarantee of unlimited production hosting.
