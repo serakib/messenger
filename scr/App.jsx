@@ -57,7 +57,7 @@ function App() {
   const [messages, setMessages] = useState(seedMessages);
   const [showProfile, setShowProfile] = useState(false);
   const [mobileChat, setMobileChat] = useState(false);
-  const [dark, setDark] = useState(false);
+  const [dark, setDark] = useState(true);
   const [toast, setToast] = useState('');
   const [showNewChat, setShowNewChat] = useState(false);
   const [activeMenu, setActiveMenu] = useState(false);
@@ -66,12 +66,12 @@ function App() {
   const [settingsTab, setSettingsTab] = useState('Appearance');
   const messagesEndRef = useRef(null);
 
+  const selected = people.find(p => p.id === selectedId) || people[0];
+  const currentMessages = messages[selectedId] || [];
+
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
   }, [selectedId, currentMessages.length]);
-
-  const selected = people.find(p => p.id === selectedId) || people[0];
-  const currentMessages = messages[selectedId] || [];
   const filteredPeople = useMemo(() => people.filter(p => p.name.toLowerCase().includes(search.toLowerCase())), [search]);
 
   const notify = (text) => { setToast(text); window.setTimeout(() => setToast(''), 2400); };
