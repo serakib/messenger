@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Search, MessageCircle, Users, Phone, Bell, Settings, UserRound,
   Plus, MoreHorizontal, Paperclip, Smile, Image, Mic, Send, CheckCheck,
@@ -64,6 +64,11 @@ function App() {
   const [showEmoji, setShowEmoji] = useState(false);
   const [callModal, setCallModal] = useState('');
   const [settingsTab, setSettingsTab] = useState('Appearance');
+  const messagesEndRef = useRef(null);
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+  }, [selectedId, currentMessages.length]);
 
   const selected = people.find(p => p.id === selectedId) || people[0];
   const currentMessages = messages[selectedId] || [];
@@ -151,6 +156,7 @@ function App() {
           </div>)}
         </div>
         {selectedId===1 && <div className="typing-row"><Avatar person={selected} size="xs"/><div className="typing-bubble"><i/><i/><i/></div><span>Ava is typing</span></div>}
+        <div ref={messagesEndRef} aria-hidden="true"/>
       </div>
       <div className="composer-area">
         {showEmoji && <div className="emoji-tray">{['😊','❤️','✨','😂','🙌','🔥','👍','🎉'].map(e=><button key={e} onClick={()=>addEmoji(e)}>{e}</button>)}</div>}
