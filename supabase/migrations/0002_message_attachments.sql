@@ -20,9 +20,13 @@ alter table public.messages
     and (
       attachment_path is null
       or (
-        attachment_name is not null
+        attachment_path like conversation_id::text || '/%'
+        and attachment_name is not null
+        and attachment_name <> ''
+        and attachment_mime is not null
         and attachment_mime in ('image/jpeg', 'image/png', 'image/webp', 'application/pdf', 'text/plain')
-        and attachment_size between 0 and 10485760
+        and attachment_size is not null
+        and attachment_size between 1 and 10485760
       )
     )
   );
