@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Search, MessageCircle, Users, Phone, Bell, Settings, UserRound,
   Plus, MoreHorizontal, Paperclip, Smile, Image as ImageIcon, Mic, Send,
-  CheckCheck, Video, PhoneCall, ChevronLeft, Pin, Archive, BellOff,
+  CheckCheck, Video, PhoneCall, ChevronLeft, ChevronDown, Pin, Archive, BellOff,
   ShieldCheck, Palette, LogOut, Trash2, X, ArrowUpRight, Sparkles,
   FileText, CircleHelp, SlidersHorizontal, Moon, Sun, Check, Camera,
   SearchX, Menu, CircleUserRound, Filter, MessageSquarePlus, LoaderCircle,
@@ -23,9 +23,7 @@ const navigation = [
   { id: 'Chats', icon: MessageCircle },
   { id: 'People', icon: Users },
   { id: 'Calls', icon: Phone },
-  { id: 'Notifications', icon: Bell },
-  { id: 'Settings', icon: Settings },
-  { id: 'Profile', icon: CircleUserRound }
+  { id: 'Notifications', icon: Bell }
 ];
 
 const EMOJIS = ['😊', '❤️', '✨', '😂', '🙌', '🔥', '👍', '🎉', '🥹', '💚', '👏', '🤝'];
@@ -100,6 +98,21 @@ function mapConversation(conversation, userId) {
     is_pinned: Boolean(conversation.is_pinned),
     is_muted: Boolean(conversation.is_muted),
     is_archived: Boolean(conversation.is_archived),
+    members: members.map(member => {
+      const memberProfile = member.profile || {};
+      const memberName = memberProfile.display_name || memberProfile.username || 'Orbit member';
+      return {
+        id: member.user_id,
+        name: memberName,
+        initials: initialsFor(memberName),
+        color: colorFor(memberName),
+        avatarUrl: memberProfile.avatar_url || null
+      };
+    }),
+    groupSummary: members
+      .filter(member => member.user_id !== userId)
+      .map(member => member.profile?.display_name || member.profile?.username || 'Member')
+      .join(', '),
     peerId: otherMember?.user_id || null,
     avatarUrl: profile.avatar_url || null,
     preview: latest?.body || latest?.attachment_name || 'No messages yet',
@@ -128,7 +141,10 @@ function App() {
   const [message, setMessage] = useState('');
   const [dark, setDark] = useStoredState('orbit.theme.v2', true);
   const [filter, setFilter] = useState('all');
+  const [filterMenu, setFilterMenu] = useState(false);
   const [showArchived, setShowArchived] = useState(false);
+  const [showChatSearch, setShowChatSearch] = useState(false);
+  const [chatSearch, setChatSearch] = useState('');
   const [showDetails, setShowDetails] = useState(false);
   const [mobileChat, setMobileChat] = useState(false);
   const [toast, setToast] = useState('');
@@ -307,6 +323,7 @@ function App() {
     return (liveMessages[selected.id] || []).map(item => ({
       id: item.id,
       from: item.sender_id === currentUserId ? 'me' : 'them',
+      sender: selected.members?.find(member => member.id === item.sender_id) || null,
       text: item.body || '',
       time: formatClock(item.created_at),
       attachment_name: item.attachment_name,
@@ -316,6 +333,10 @@ function App() {
       created_at: item.created_at
     }));
   }, [selected, isLive, liveMessages, currentUserId]);
+
+  const visibleMessages = chatSearch.trim()
+    ? currentMessages.filter(item => (item.text || item.attachment_name || '').toLowerCase().includes(chatSearch.trim().toLowerCase()))
+    : currentMessages;
 
   useEffect(() => {
     if (!isLive) return undefined;
@@ -380,6 +401,9 @@ function App() {
       }
       if (event.key === 'Escape') {
         setShowNewChat(false);
+        setShowChatSearch(false);
+        setChatSearch('');
+        setFilterMenu(false);
         setActiveMenu(false);
         setInboxMenu(false);
         setShowEmoji(false);
@@ -400,6 +424,7 @@ function App() {
         if (Boolean(person.is_archived) !== showArchived) return false;
         if (filter === 'unread' && !person.unread) return false;
         if (filter === 'groups' && !person.group) return false;
+        if (filter === 'favourites' && !person.is_pinned) return false;
         if (query && !(person.name.toLowerCase().includes(query) || String(person.preview || '').toLowerCase().includes(query))) return false;
         return true;
       })
@@ -678,15 +703,11 @@ function App() {
 
   return (
     <div className={'app-shell ' + (dark ? 'dark' : 'light') + (showDetails ? ' has-details' : '')}>
+      <header className="app-titlebar">
+        <span className="titlebar-mark"><MessageCircle size={18} strokeWidth={2.5} /></span>
+        <strong>Orbit</strong><span className="titlebar-product">Messenger</span>
+      </header>
       <aside className={'rail' + (mobileChat ? ' rail-mobile-hidden' : '')}>
-        <div className="brand-mark">
-          <span className="brand-orbit"><MessageCircle size={21} strokeWidth={2.5} /></span>
-          <span>orbit</span>
-        </div>
-        <button className={'rail-user' + (activeNav === 'Profile' ? ' active' : '')} onClick={() => { setActiveNav('Profile'); setMobileChat(false); }} title="Account">
-          <Avatar person={{ name: isLive ? currentUserName : 'Account', initials: isLive ? initialsFor(currentUserName) : 'U', color: 'purple' }} size="sm" />
-        </button>
-        <div className="rail-divider" />
         <nav className="rail-navigation" aria-label="Main navigation">
           {navigation.map(item => {
             const Icon = item.icon;
@@ -698,7 +719,9 @@ function App() {
             );
           })}
         </nav>
+        <div className="rail-divider" />
         <div className="rail-spacer" />
+        <button className={'rail-button' + (activeNav === 'Settings' ? ' active' : '')} title="Settings" onClick={() => { setActiveNav('Settings'); setMobileChat(false); }}><Settings size={20} /></button>
         <button className="rail-button" title="Help" onClick={() => notify('Help centre is not available yet.')}><CircleHelp size={20} /></button>
         <button className="rail-button" title={dark ? 'Switch to light theme' : 'Switch to dark theme'} onClick={() => setDark(!dark)}>{dark ? <Sun size={20} /> : <Moon size={20} />}</button>
         <button className="rail-bottom" onClick={() => { setActiveNav('Profile'); setMobileChat(false); }} title="Your account">
@@ -713,7 +736,7 @@ function App() {
             {activeNav === 'Chats' && isLive && !showArchived && <span className="heading-count">{filteredPeople.length}</span>}
           </div>
           <div className="inbox-heading-actions">
-            <button className="icon-button" onClick={openNewChat} aria-label="New chat" title="New chat"><MessageSquarePlus size={19} /></button>
+            <button className="icon-button new-chat-action" onClick={openNewChat} aria-label="New chat" title="New chat"><Plus size={21} /></button>
             <button className={'icon-button' + (inboxMenu ? ' active' : '')} onClick={() => setInboxMenu(!inboxMenu)} aria-label="More inbox options" title="More"><MoreHorizontal size={20} /></button>
             {inboxMenu && <div className="dropdown-menu inbox-dropdown">
               {isLive && <button onClick={() => { Promise.all(liveChats.map(item => markConversationRead(item.id))).then(() => setLiveChats(items => items.map(item => ({ ...item, unread: false })))).then(() => notify('All conversations marked as read')).catch(() => notify('Could not update read status')); setInboxMenu(false); }}><CheckCheck size={15} /> Mark all as read</button>}
@@ -738,7 +761,11 @@ function App() {
               <div className="inbox-filters" role="tablist" aria-label="Chat filters">
                 <button className={'filter-chip' + (filter === 'all' ? ' selected' : '')} onClick={() => setFilter('all')}>All</button>
                 <button className={'filter-chip' + (filter === 'unread' ? ' selected' : '')} onClick={() => setFilter('unread')}>Unread {unreadTotal > 0 && <span>{unreadTotal}</span>}</button>
-                <button className={'filter-chip' + (filter === 'groups' ? ' selected' : '')} onClick={() => setFilter('groups')}>Groups</button>
+                <button className={'filter-chip' + (filter === 'favourites' ? ' selected' : '')} onClick={() => setFilter('favourites')}>Favourites</button>
+                <div className="filter-more-wrap">
+                  <button className={'filter-chip filter-more' + (filter === 'groups' ? ' selected' : '')} onClick={() => setFilterMenu(!filterMenu)} aria-label="More chat filters"><ChevronDown size={15} /></button>
+                  {filterMenu && <div className="dropdown-menu filter-dropdown"><button onClick={() => { setFilter('groups'); setFilterMenu(false); }}>Groups</button><button onClick={() => { setFilter('all'); setFilterMenu(false); }}>Clear filter</button></div>}
+                </div>
               </div>
             )}
             {isLive && !showArchived && archivedCount > 0 && <button className="archive-row" onClick={() => { setShowArchived(true); setFilter('all'); setSearch(''); }}>
@@ -850,8 +877,14 @@ function App() {
           <>
             <header className="chat-header">
               <button className="mobile-back icon-button" onClick={() => setMobileChat(false)} aria-label="Back to conversations"><ChevronLeft size={21} /></button>
-              <div className="chat-person"><Avatar person={selected} showOnline /><div><strong>{selected.name}</strong><span className={selected.online ? 'status-online' : ''}>{selected.online ? 'Online now' : selected.status}</span></div></div>
+              <div className="chat-person" onClick={() => setShowDetails(!showDetails)} role="button" tabIndex={0}>
+                <Avatar person={selected} />
+                <div><strong>{selected.name}</strong><span>{selected.group ? selected.groupSummary || selected.status : selected.status}</span></div>
+              </div>
+              {showChatSearch && <div className="chat-header-search"><Search size={16} /><input value={chatSearch} onChange={event => setChatSearch(event.target.value)} placeholder="Search loaded messages" autoFocus /><button onClick={() => { setChatSearch(''); setShowChatSearch(false); }} aria-label="Close search"><X size={15} /></button></div>}
               <div className="header-actions">
+                <button className="icon-button" disabled title="Audio and video calling are not available yet"><Video size={19} /></button>
+                <button className="icon-button" onClick={() => setShowChatSearch(!showChatSearch)} title="Search loaded messages" aria-label="Search messages"><Search size={19} /></button>
                 <button className={'icon-button' + (showDetails ? ' tinted' : '')} onClick={() => setShowDetails(!showDetails)} title="Contact details" aria-label="Contact details"><SlidersHorizontal size={18} /></button>
                 <button className="icon-button" onClick={() => setActiveMenu(!activeMenu)} title="More options" aria-label="More chat options"><MoreVertical size={19} /></button>
                 {activeMenu && <div className="dropdown-menu chat-dropdown">
@@ -865,13 +898,13 @@ function App() {
             </header>
 
             <div className="messages-scroll">
-              <div className="encryption-note"><ShieldCheck size={14} /> Messages are synced to this conversation. End-to-end encryption is not enabled.</div>
               <div className="message-stack">
-                {currentMessages.map(item => (
+                {visibleMessages.map(item => (
                   <div key={item.id} className={'message-line ' + (item.from === 'me' ? 'outgoing' : 'incoming')}>
-                    {item.from === 'them' && <Avatar person={selected} size="xs" />}
+                    {item.from === 'them' && selected.group && <Avatar person={item.sender || selected} size="xs" />}
                     <div className="message-body">
-                      {item.text && <div className="bubble">{item.text}</div>}
+                      {selected.group && item.from === 'them' && <div className="message-sender" style={{ color: ({ lavender: '#b388ff', peach: '#ffb37a', mint: '#51d6c1', rose: '#ff7eb6', blue: '#7db7ff', gold: '#f2c66d', teal: '#51c7bb' })[item.sender?.color] || '#53bdeb' }}>{item.sender?.name || 'Member'}</div>}
+                      {item.text && <div className="bubble"><span className="bubble-text">{item.text}</span><span className="bubble-meta">{item.time}</span></div>}
                       {item.attachment_name && (
                         <button className="attachment-bubble" onClick={() => downloadAttachment(item)}>
                           <span className="attachment-icon"><FileText size={20} /></span>
@@ -879,11 +912,11 @@ function App() {
                           <Download size={16} />
                         </button>
                       )}
-                      <div className="message-meta">{item.time}</div>
+                      {item.attachment_name && <div className="message-meta">{item.time}</div>}
                     </div>
                   </div>
                 ))}
-                {currentMessages.length === 0 && <div className="empty-thread"><div className="empty-thread-icon"><MessageCircle size={27} /></div><h3>Start the conversation</h3><p>Messages you send and receive will appear here.</p></div>}
+                {visibleMessages.length === 0 && <div className="empty-thread"><div className="empty-thread-icon"><MessageCircle size={27} /></div><h3>{currentMessages.length && chatSearch ? 'No messages found' : 'Start the conversation'}</h3><p>{currentMessages.length && chatSearch ? 'Try another search term.' : 'Messages you send and receive will appear here.'}</p></div>}
               </div>
               <div ref={messagesEndRef} aria-hidden="true" />
             </div>
@@ -895,7 +928,9 @@ function App() {
                 <button type="button" className="composer-icon" onClick={() => fileInputRef.current?.click()} title="Attach a file" disabled={attachmentBusy}><Paperclip size={19} /></button>
                 <input value={message} onChange={event => setMessage(event.target.value)} placeholder={'Message ' + selected.name.split(' ')[0] + '…'} aria-label="Write a message" maxLength={5000} />
                 <button type="button" className={'composer-icon' + (showEmoji ? ' emoji-active' : '')} onClick={() => setShowEmoji(!showEmoji)} title="Emoji"><Smile size={20} /></button>
-                <button type="submit" className="send-button" disabled={!message.trim() || sendBusy}><Send size={17} /></button>
+                {message.trim()
+                  ? <button type="submit" className="send-button" disabled={sendBusy}><Send size={17} /></button>
+                  : <button type="button" className="composer-icon mic-icon" disabled title="Voice messages are not available yet"><Mic size={20} /></button>}
               </form>
               {attachmentBusy && <div className="upload-progress"><LoaderCircle size={13} className="spin" /> Uploading attachment…</div>}
             </div>
