@@ -51,7 +51,8 @@ const navigation = [
   { id: 'People', icon: Users },
   { id: 'Calls', icon: Phone },
   { id: 'Notifications', icon: Bell },
-  { id: 'Settings', icon: Settings }
+  { id: 'Settings', icon: Settings },
+  { id: 'Profile', icon: CircleUserRound }
 ];
 
 const EMOJIS = ['😊', '❤️', '✨', '😂', '🙌', '🔥', '👍', '🎉', '🥹', '💚', '👏', '🤝'];
@@ -962,7 +963,7 @@ function App() {
             </div>
             {newChatMode === 'group' && <label className="group-title-field">Group name <input value={groupTitle} onChange={event => setGroupTitle(event.target.value)} placeholder="Give your group a name" maxLength={80} /></label>}
             <div className="search-box modal-search"><Search size={16} /><input value={newChatSearch} onChange={event => setNewChatSearch(event.target.value)} placeholder={isLive ? 'Search Orbit members' : 'Find a sample contact'} autoFocus /></div>
-            <p className="modal-subtitle">{newChatMode === 'group' ? 'Select two or more people to create a group.' : (isLive ? 'Choose a member to start a private conversation.' : 'Choose someone from the sample contact list.')}</p>
+            <p className="modal-subtitle">{newChatMode === 'group' ? 'Add at least one member to create a group.' : (isLive ? 'Choose a member to start a private conversation.' : 'Choose someone from the sample contact list.')}</p>
             <div className="new-chat-list">
               {(isLive ? newChatResults : people.filter(person => person.name.toLowerCase().includes(newChatSearch.toLowerCase()))).map(person => {
                 const isChosen = groupMemberIds.map(String).includes(String(person.id));
