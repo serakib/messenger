@@ -22,6 +22,7 @@ The migrations create:
 - Realtime message publication
 - Email/password Auth and Phone OTP UI integration (SMS provider is configured separately)
 - Private-schema security helpers, trigger-function permission restrictions, and foreign-key indexes
+- Per-user pin, mute and archive preferences stored with conversation membership
 
 RLS must remain enabled. Do not disable it to make the app appear to work.
 
