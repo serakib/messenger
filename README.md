@@ -1,51 +1,61 @@
-# Orbit — Messenger UI Demo
+# Orbit — Messenger
 
-Orbit is a responsive **front-end UI demo** inspired by modern messaging apps. It is built with React, Vite, Lucide icons and plain CSS.
+Orbit is a React-based messaging application prototype. The current release is a **frontend demo**, not yet a live messaging service.
 
-## What is included?
-- Responsive desktop, tablet and mobile layout
-- Inbox, search, pinned chat and unread badges
-- Conversation switching and local demo message sending
-- Contact details panel, shared-media preview and chat preferences
-- People, Calls, Notifications, Settings and Profile screens
-- New-conversation modal and call-preview modal
-- Light/dark theme toggle
-- Small toast notifications for demo-only actions
+## Live deployment
 
-## Important: this is not a real messaging service
-The demo does **not** connect to Firebase or a server. Messages you send only live in the current browser session. Authentication, real-time delivery, file uploads, push notifications, actual voice/video calls, end-to-end encryption, account deletion and backend-enforced limits are **not implemented**. The encryption notice is illustrative only; do not use it to send private information.
+The app is built with Vite and deployed to GitHub Pages from the `main` branch. GitHub Pages hosting is free for public repositories.
 
-## Run it on your computer
+## Current features
 
-1. Install **Node.js LTS** from https://nodejs.org/ .
-2. Extract this ZIP file.
-3. Open the extracted `messenger-ui-demo` folder in VS Code.
-4. Open a terminal in that folder.
-5. Run `npm install`.
-6. Run `npm run dev`.
-7. Open the local address Vite prints (usually `http://localhost:5173`).
+- Responsive inbox and conversation layout
+- Demo contacts and seeded conversations
+- Local in-memory message sending
+- Contact details, people, calls, notifications and settings previews
+- Light/dark theme and mobile layout
 
-To check the production build, run `npm run build`. The output will be created in the `dist` folder.
+## Important limitations
+
+The current app does **not** yet provide real accounts, server-side message delivery, durable message history, file uploads, push notifications, real voice/video calls, or end-to-end encryption. Demo contacts and messages are hard-coded. Messages sent in the UI are lost on refresh. Do not use this prototype for private or sensitive communication.
+
+## Development
+
+Requirements: Node.js LTS.
+
+```bash
+npm install
+npm run dev
+```
+
+Create a production build:
+
+```bash
+npm run build
+npm run preview
+```
 
 ## Project structure
 
 ```text
-messenger-ui-demo/
+.
 ├── index.html
 ├── package.json
-├── README.md
-└── src/
-    ├── App.jsx       # UI components and demo interactions
-    ├── main.jsx      # React entry point
-    └── styles.css    # Responsive layout, colors and themes
+├── vite.config.js
+├── scr/
+│   ├── App.jsx
+│   ├── main.jsx
+│   └── styles.css
+└── .github/workflows/static.yml
 ```
 
-## Suggested next development stages
-1. Add Firebase Authentication and protected profile data.
-2. Add Firestore chat collections and real-time listeners.
-3. Add Firebase Storage with strict access rules and file-size/expiry enforcement.
-4. Add Cloud Functions or another trusted backend for daily quotas and scheduled file deletion.
-5. Add WebRTC signaling and real call flows.
-6. Test security rules and mobile behavior before publishing.
+## Free-first roadmap
 
-Keep Firebase credentials and privileged secrets out of client-side code. UI limits alone are not security controls.
+1. Keep the frontend on GitHub Pages.
+2. Add Supabase Auth for email-based accounts.
+3. Add PostgreSQL tables and Row Level Security for profiles, conversations, memberships and messages.
+4. Add Supabase Realtime for message updates and presence.
+5. Add Supabase Storage with private buckets and strict policies for attachments.
+6. Add reporting, blocking, rate limits and account controls.
+7. Evaluate WebRTC calling separately; reliable global calling may require paid TURN infrastructure.
+
+Supabase free-plan quotas and inactivity/pause policies can change. A free tier is suitable for a small project or prototype, not a guarantee of unlimited production hosting.
