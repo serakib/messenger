@@ -17,6 +17,7 @@ export async function listMyConversations() {
       joined_at,
       last_read_at,
       is_pinned,
+      is_favorite,
       is_muted,
       is_archived,
       conversation:conversations (
@@ -45,6 +46,7 @@ export async function listMyConversations() {
       myRole: row.role,
       lastReadAt: row.last_read_at,
       is_pinned: row.is_pinned,
+      is_favorite: row.is_favorite,
       is_muted: row.is_muted,
       is_archived: row.is_archived
     };
@@ -53,7 +55,7 @@ export async function listMyConversations() {
 
 export async function updateConversationPreference(conversationId, updates) {
   const allowed = {};
-  for (const key of ['is_pinned', 'is_muted', 'is_archived']) {
+  for (const key of ['is_pinned', 'is_favorite', 'is_muted', 'is_archived']) {
     if (typeof updates?.[key] === 'boolean') allowed[key] = updates[key];
   }
   if (!Object.keys(allowed).length) throw new Error('No conversation preference was provided.');
@@ -68,7 +70,7 @@ export async function updateConversationPreference(conversationId, updates) {
     .update(allowed)
     .eq('conversation_id', conversationId)
     .eq('user_id', authData.user.id)
-    .select('conversation_id, is_pinned, is_muted, is_archived')
+    .select('conversation_id, is_pinned, is_favorite, is_muted, is_archived')
     .single();
   if (error) throw error;
   return data;
