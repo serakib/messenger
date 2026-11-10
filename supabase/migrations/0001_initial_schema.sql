@@ -85,6 +85,8 @@ as $$
   );
 $$;
 
+revoke all on function public.is_conversation_member(uuid) from public, anon;
+revoke all on function public.is_conversation_creator(uuid) from public, anon;
 grant execute on function public.is_conversation_member(uuid) to authenticated;
 grant execute on function public.is_conversation_creator(uuid) to authenticated;
 
@@ -177,6 +179,11 @@ create policy "Conversation creators can add members"
   with check (public.is_conversation_creator(conversation_id));
 
 drop policy if exists "Creators or members can leave" on public.conversation_members;
+create policy "Users can update their own read position"
+  on public.conversation_members for update to authenticated
+  using (user_id = (select auth.uid()))
+  with check (user_id = (select auth.uid()));
+
 create policy "Creators or members can leave"
   on public.conversation_members for delete to authenticated
   using (
@@ -202,7 +209,10 @@ drop policy if exists "Authors can edit their messages" on public.messages;
 create policy "Authors can edit their messages"
   on public.messages for update to authenticated
   using (sender_id = (select auth.uid()))
-  with check (sender_id = (select auth.uid()));
+  with check (
+    sender_id = (select auth.uid())
+    and public.is_conversation_member(conversation_id)
+  );
 
 drop policy if exists "Authors can delete their messages" on public.messages;
 create policy "Authors can delete their messages"
@@ -210,8 +220,10 @@ create policy "Authors can delete their messages"
   using (sender_id = (select auth.uid()));
 
 grant select, update on public.profiles to authenticated;
-grant select, insert, update on public.conversations to authenticated;
+grant select, insert on public.conversations to authenticated;
+grant update (title) on public.conversations to authenticated;
 grant select, insert, delete on public.conversation_members to authenticated;
+grant update (last_read_at) on public.conversation_members to authenticated;
 grant select, insert, update, delete on public.messages to authenticated;
 
 -- Private attachment bucket. Store objects under <conversation-uuid>/<filename>.
@@ -251,6 +263,7 @@ create policy "Owners can delete their attachments"
   using (
     bucket_id = 'chat-attachments'
     and owner_id = (select auth.uid())::text
+    and public.is_conversation_member(((storage.foldername(name))[1])::uuid)
   );
 
 -- Enable live message events. Ignore duplicate publication membership.
