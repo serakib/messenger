@@ -2,11 +2,12 @@ import { requireSupabase } from '../lib/supabase.js';
 
 const MESSAGE_PAGE_SIZE = 40;
 const MAX_ATTACHMENT_BYTES = 10 * 1024 * 1024;
+const ALLOWED_ATTACHMENT_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf', 'text/plain'];
 
 export async function listMyConversations() {
   const { data, error } = await requireSupabase()
     .from('conversation_members')
-    .select(`
+    .select(\`
       role,
       joined_at,
       last_read_at,
@@ -15,18 +16,43 @@ export async function listMyConversations() {
         members:conversation_members (
           user_id, role, profile:profiles (id, username, display_name, avatar_url)
         ),
-        latest_message:messages (id, body, sender_id, created_at)
+        latest_message:messages (id, body, sender_id, created_at, attachment_path, attachment_name, attachment_mime, attachment_size)
       )
-    `)
+    \`)
     .order('joined_at', { ascending: false });
   if (error) throw error;
-  return (data || []).map(row => ({ ...row.conversation, myRole: row.role, lastReadAt: row.last_read_at }));
+  return (data || [])
+    .map(row => row.conversation ? { ...row.conversation, myRole: row.role, lastReadAt: row.last_read_at } : null)
+    .filter(Boolean);
+}
+
+export async function searchProfiles(search = '', limit = 40) {
+  const client = requireSupabase();
+  const { data: authData, error: authError } = await client.auth.getUser();
+  if (authError) throw authError;
+  if (!authData.user) throw new Error('Please sign in to find people.');
+
+  const clean = String(search).trim().replace(/[%_,()]/g, ' ').replace(/\s+/g, ' ').slice(0, 60);
+  let query = client
+    .from('profiles')
+    .select('id, username, display_name, avatar_url, bio')
+    .neq('id', authData.user.id)
+    .order('display_name', { ascending: true })
+    .limit(Math.min(Math.max(Number(limit) || 40, 1), 60));
+
+  if (clean) {
+    query = query.or('display_name.ilike.%' + clean + '%,username.ilike.%' + clean + '%');
+  }
+
+  const { data, error } = await query;
+  if (error) throw error;
+  return data || [];
 }
 
 export async function getMessages(conversationId, { before, limit = MESSAGE_PAGE_SIZE } = {}) {
   let query = requireSupabase()
     .from('messages')
-    .select('id, conversation_id, sender_id, body, created_at, edited_at, deleted_at')
+    .select('id, conversation_id, sender_id, body, created_at, edited_at, deleted_at, attachment_path, attachment_name, attachment_mime, attachment_size')
     .eq('conversation_id', conversationId)
     .order('created_at', { ascending: false })
     .limit(Math.min(Math.max(Number(limit) || MESSAGE_PAGE_SIZE, 1), 100));
@@ -50,7 +76,7 @@ export async function sendMessage(conversationId, body) {
   const { data, error } = await client
     .from('messages')
     .insert({ conversation_id: conversationId, sender_id: authData.user.id, body: text })
-    .select()
+    .select('id, conversation_id, sender_id, body, created_at, attachment_path, attachment_name, attachment_mime, attachment_size')
     .single();
   if (error) throw error;
   return data;
@@ -79,10 +105,9 @@ export async function createConversation({ memberIds, title = null, type = 'dire
 
   if (uniqueMembers.length) {
     const { error: memberError } = await client.from('conversation_members').insert(
-      uniqueMembers.map(user_id => ({ conversation_id: conversation.id, user_id, role: 'member' }))
+      uniqueMembers.map(user_id => ({ conversation_id: conversation.id, user_id }))
     );
     if (memberError) {
-      // The owner-delete policy lets us roll back this incomplete conversation.
       await client.from('conversations').delete().eq('id', conversation.id);
       throw memberError;
     }
@@ -91,11 +116,12 @@ export async function createConversation({ memberIds, title = null, type = 'dire
 }
 
 export async function markConversationRead(conversationId) {
-  const { data: authData, error: authError } = await requireSupabase().auth.getUser();
+  const client = requireSupabase();
+  const { data: authData, error: authError } = await client.auth.getUser();
   if (authError) throw authError;
   if (!authData.user) throw new Error('Please sign in first.');
 
-  const { error } = await requireSupabase()
+  const { error } = await client
     .from('conversation_members')
     .update({ last_read_at: new Date().toISOString() })
     .eq('conversation_id', conversationId)
@@ -106,14 +132,14 @@ export async function markConversationRead(conversationId) {
 export function subscribeToMessages(conversationId, onMessage) {
   const client = requireSupabase();
   const channel = client
-    .channel(`conversation:${conversationId}`)
+    .channel('conversation:' + conversationId)
     .on(
       'postgres_changes',
       {
         event: 'INSERT',
         schema: 'public',
         table: 'messages',
-        filter: `conversation_id=eq.${conversationId}`,
+        filter: 'conversation_id=eq.' + conversationId
       },
       payload => onMessage(payload.new)
     )
@@ -125,8 +151,7 @@ export function subscribeToMessages(conversationId, onMessage) {
 export async function uploadAttachment(conversationId, file) {
   if (!(file instanceof File)) throw new Error('Choose a file to upload.');
   if (file.size > MAX_ATTACHMENT_BYTES) throw new Error('Attachments must be 10 MB or smaller.');
-  const allowed = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf', 'text/plain'];
-  if (!allowed.includes(file.type)) throw new Error('This file type is not supported.');
+  if (!ALLOWED_ATTACHMENT_TYPES.includes(file.type)) throw new Error('This file type is not supported.');
 
   const client = requireSupabase();
   const { data: authData, error: authError } = await client.auth.getUser();
@@ -134,11 +159,41 @@ export async function uploadAttachment(conversationId, file) {
   if (!authData.user) throw new Error('Please sign in before uploading.');
 
   const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_').slice(-100) || 'attachment';
-  const objectPath = `${conversationId}/${crypto.randomUUID()}-${safeName}`;
+  const objectPath = conversationId + '/' + crypto.randomUUID() + '-' + safeName;
   const { data, error } = await client.storage
     .from('chat-attachments')
     .upload(objectPath, file, { cacheControl: '3600', upsert: false, contentType: file.type });
   if (error) throw error;
+  return { ...data, originalName: file.name, mimeType: file.type, size: file.size };
+}
+
+export async function sendAttachmentMessage(conversationId, file) {
+  const client = requireSupabase();
+  const uploaded = await uploadAttachment(conversationId, file);
+  const { data: authData, error: authError } = await client.auth.getUser();
+  if (authError || !authData.user) {
+    await client.storage.from('chat-attachments').remove([uploaded.path]);
+    throw authError || new Error('Please sign in before uploading.');
+  }
+
+  const { data, error } = await client
+    .from('messages')
+    .insert({
+      conversation_id: conversationId,
+      sender_id: authData.user.id,
+      body: '',
+      attachment_path: uploaded.path,
+      attachment_name: uploaded.originalName,
+      attachment_mime: uploaded.mimeType,
+      attachment_size: uploaded.size
+    })
+    .select('id, conversation_id, sender_id, body, created_at, attachment_path, attachment_name, attachment_mime, attachment_size')
+    .single();
+
+  if (error) {
+    await client.storage.from('chat-attachments').remove([uploaded.path]);
+    throw error;
+  }
   return data;
 }
 
