@@ -13,7 +13,7 @@ The app is built with Vite and deployed to GitHub Pages from the `main` branch.
 - WhatsApp-inspired three-column workspace with a mobile conversation view
 - Default dark theme, with a light-theme option
 - Contact search and All / Unread / Groups filters
-- Per-account pin, mute and archive preferences stored in Supabase
+- Per-account pin, favourite, mute and archive preferences stored in Supabase
 - Email/password sign-up and sign-in
 - Phone-number sign-in and sign-up UI with SMS OTP verification (requires a configured Supabase SMS provider)
 - Supabase profile discovery, direct conversations and group conversations when configured
@@ -29,6 +29,7 @@ The Supabase project for this deployment has been created and the four schema mi
 2. `supabase/migrations/0002_message_attachments.sql`
 3. `supabase/migrations/0003_security_hardening.sql`
 4. `supabase/migrations/0004_member_preferences.sql`
+5. `supabase/migrations/0005_member_favourites.sql`
 
 The GitHub Pages workflow contains the project's public Supabase URL and publishable client key as build defaults. Optional GitHub Actions repository Variables named `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` can override them. These are public browser configuration values; never use a `sb_secret_...` key, `service_role` key, or database password in this frontend or in GitHub Pages.
 
