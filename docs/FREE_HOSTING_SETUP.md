@@ -13,6 +13,7 @@ Run these SQL files in order from **SQL Editor → New query**:
 1. `supabase/migrations/0001_initial_schema.sql`
 2. `supabase/migrations/0002_message_attachments.sql`
 3. `supabase/migrations/0003_security_hardening.sql`
+4. `supabase/migrations/0004_member_preferences.sql`
 
 The migrations create:
 - User profiles connected to Supabase Auth
