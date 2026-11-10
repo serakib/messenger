@@ -11,7 +11,9 @@ The app needs authentication, durable storage, a database and realtime updates. 
 1. Create a project at https://supabase.com/dashboard (Free plan is enough to start).
 2. Choose a strong database password and keep it private.
 3. Open **SQL Editor → New query**.
-4. Run the SQL files in order in the Supabase SQL Editor:\n   - `supabase/migrations/0001_initial_schema.sql`\n   - `supabase/migrations/0002_message_attachments.sql`
+4. Run the SQL files in order in the Supabase SQL Editor:
+   - `supabase/migrations/0001_initial_schema.sql`
+   - `supabase/migrations/0002_message_attachments.sql`
 5. Open **Project Settings → API Keys** (or the project's **Connect** dialog) and copy the **Project URL** and **Publishable key** (`sb_publishable_...`).
 6. In GitHub, open **Settings → Secrets and variables → Actions → Variables → New repository variable** and add:
    - `VITE_SUPABASE_URL` = your Supabase Project URL
@@ -21,7 +23,8 @@ The app needs authentication, durable storage, a database and realtime updates. 
 7. In Supabase **Authentication → URL Configuration**, set the Site URL to:
    `https://serakib.github.io/messenger/`
    Add the same URL to the allowed Redirect URLs.
-8. Open **Authentication → Providers → Email** and keep Email enabled. Keep email confirmation enabled. For production, configure a trusted SMTP sender; the built-in sender is restricted and intended for light testing.\n9. Back in GitHub, open **Actions → Build and deploy Orbit to GitHub Pages → Run workflow** and run it on `main`. Updating repository Variables alone does not trigger a new build.
+8. Open **Authentication → Providers → Email** and keep Email enabled. Keep email confirmation enabled. For production, configure a trusted SMTP sender; the built-in sender is restricted and intended for light testing.
+9. Back in GitHub, open **Actions → Build and deploy Orbit to GitHub Pages → Run workflow** and run it on `main`. Updating repository Variables alone does not trigger a new build.
 
 ## Database foundation included
 
