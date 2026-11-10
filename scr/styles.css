@@ -853,3 +853,86 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, a:focus-visib
   }
 }
 @keyframes mobile-enter { from { opacity: .88; transform: translateX(10px); } to { opacity: 1; transform: translateX(0); } }
+
+
+/* Group conversation creation */
+.new-chat-modes {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 5px;
+  margin: 12px 0 10px;
+  padding: 4px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--panel-bg);
+}
+.new-chat-modes button {
+  min-height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  border: 0;
+  border-radius: 7px;
+  color: var(--muted);
+  background: transparent;
+  font-size: 10px;
+  font-weight: 600;
+}
+.new-chat-modes button.current {
+  color: var(--accent-strong);
+  background: var(--accent-soft);
+}
+.group-title-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 7px 0 10px;
+  color: var(--muted);
+  font-size: 9px;
+  font-weight: 600;
+}
+.group-title-field input {
+  width: 100%;
+  height: 37px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  outline: none;
+  color: var(--text);
+  background: var(--input-bg);
+  font-size: 10px;
+}
+.group-title-field input:focus { border-color: var(--accent); }
+.new-chat-person.chosen { background: var(--accent-soft); }
+.member-check {
+  width: 20px;
+  height: 20px;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  color: #fff;
+  background: transparent;
+}
+.member-check.checked {
+  border-color: var(--accent);
+  background: var(--accent);
+}
+.group-create-footer {
+  position: sticky;
+  bottom: -19px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 8px -19px -19px;
+  padding: 12px 19px max(12px, env(safe-area-inset-bottom));
+  border-top: 1px solid var(--line);
+  background: var(--panel-raised);
+}
+.group-create-footer > span { color: var(--muted); font-size: 9px; font-weight: 600; }
+@media(max-width:680px) {
+  .group-create-footer { margin-left: -16px; margin-right: -16px; padding-left: 16px; padding-right: 16px; }
+}
