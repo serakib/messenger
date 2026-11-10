@@ -1,51 +1,55 @@
-# Free-first backend setup (Supabase)
+# Supabase backend setup — Orbit Messenger
 
-The repository includes a Supabase-backed sign-in, profile, conversation, Realtime-message and private-attachment flow. It runs in local demo mode until you create a Supabase project, apply both migrations and add the GitHub Actions variables.
+This guide describes the Supabase project connected to the Orbit Messenger deployment.
 
-## Why Supabase?
+## Project status
 
-The app needs authentication, durable storage, a database and realtime updates. Supabase Free provides these in one service and is a practical starting point for a small community. Free-plan limits and inactivity policies can change; it is not unlimited production hosting.
+The Supabase project is already created, its database schema is installed, and the project is linked to the GitHub Pages build. You do not need to create another project.
 
-## One-time setup
+## Recreate the database (only for a new/empty project)
 
-1. Create a project at https://supabase.com/dashboard (Free plan is enough to start).
-2. Choose a strong database password and keep it private.
-3. Open **SQL Editor → New query**.
-4. Run the SQL files in order in the Supabase SQL Editor:
-   - `supabase/migrations/0001_initial_schema.sql`
-   - `supabase/migrations/0002_message_attachments.sql`
-5. Open **Project Settings → API Keys** (or the project's **Connect** dialog) and copy the **Project URL** and **Publishable key** (`sb_publishable_...`).
-6. In GitHub, open **Settings → Secrets and variables → Actions → Variables → New repository variable** and add:
-   - `VITE_SUPABASE_URL` = your Supabase Project URL
-   - `VITE_SUPABASE_PUBLISHABLE_KEY` = your publishable key (`sb_publishable_...`)
+Run these SQL files in order from **SQL Editor → New query**:
 
-   These are public client configuration values. The publishable key is designed for browser apps and is constrained by the database grants and Row Level Security policies. Never use a `sb_secret_...` key, `service_role` key, or database password in this frontend or in GitHub Pages.
-7. In Supabase **Authentication → URL Configuration**, set the Site URL to:
-   `https://serakib.github.io/messenger/`
-   Add the same URL to the allowed Redirect URLs.
-8. Open **Authentication → Providers → Email** and keep Email enabled. Keep email confirmation enabled. For production, configure a trusted SMTP sender; the built-in sender is restricted and intended for light testing.
-9. Back in GitHub, open **Actions → Build and deploy Orbit to GitHub Pages → Run workflow** and run it on `main`. Updating repository Variables alone does not trigger a new build.
+1. `supabase/migrations/0001_initial_schema.sql`
+2. `supabase/migrations/0002_message_attachments.sql`
+3. `supabase/migrations/0003_security_hardening.sql`
 
-## Database foundation included
-
-The migration creates:
-- User profiles linked to Supabase Auth
-- Direct/group conversation records
-- Conversation membership and owner role
+The migrations create:
+- User profiles connected to Supabase Auth
+- Direct and group conversations with membership and owner roles
 - Persistent messages with membership-based Row Level Security
-- A private attachment bucket with a 10 MB per-file limit and basic MIME allow-list
-- Realtime publication for messages
+- A private attachment bucket with a 10 MB per-file limit and MIME allow-list
+- Realtime message publication
+- Private-schema security helpers, trigger-function permission restrictions, and foreign-key indexes
 
-RLS is enabled. Do not disable it to make the app appear to work. Test with two separate accounts before inviting users.
+RLS must remain enabled. Do not disable it to make the app appear to work.
 
-## Current status
+## One remaining dashboard configuration
 
-The repository includes a Supabase client, Auth helpers, and UI-connected data services for profiles, conversations, messages, Realtime inserts, read positions and private attachments. Until the project variables and SQL migrations are configured, the app stays in local demo mode. After setup, test with two separate accounts to verify real cross-account delivery. The SQL is a starting schema and should receive a security review and tests before handling sensitive conversations. The app does not implement end-to-end encryption, push notifications, or audio/video calling.
+Open Supabase **Authentication → URL Configuration** and set:
 
-## Free-tier cautions
+- **Site URL:** `https://serakib.github.io/messenger/`
+- **Redirect URLs:** add `https://serakib.github.io/messenger/`
 
-- GitHub Pages hosts only the frontend; it is not a backend.
-- Supabase quotas apply to database, storage, bandwidth and monthly active users.
-- A free project may be paused after inactivity.
-- Push notifications and reliable global audio/video calling need additional infrastructure and browser permissions.
-- This app does not currently implement end-to-end encryption. Database access control is not the same as end-to-end encryption.
+Then open **Authentication → Providers → Email** and confirm Email is enabled. Keep email confirmation enabled. For production email delivery, configure a trusted SMTP sender.
+
+## GitHub Pages configuration
+
+The GitHub Actions workflow includes the public Project URL and `sb_publishable_...` key as build defaults, so the app can connect without manually creating repository variables. For key rotation or separate deployment environments, add optional repository Variables:
+
+- `VITE_SUPABASE_URL`
+- `VITE_SUPABASE_PUBLISHABLE_KEY`
+
+Repository Variables override the workflow defaults. A publishable key is intended for browser use and must be protected by database grants and RLS. Never place an `sb_secret_...` key, `service_role` key, or database password in frontend code or GitHub Pages.
+
+A push to `main` triggers the Pages build and deployment.
+
+## Security and feature limitations
+
+The database uses per-user and per-conversation RLS policies. Membership-check helpers are in a non-public schema and are not meant to be called through the Data API. The private file bucket allows access only to signed-in conversation members.
+
+The application does not currently implement end-to-end encryption, browser push notifications, or audio/video calling. RLS and TLS are not substitutes for end-to-end encryption. Test with two separate confirmed accounts before inviting other users.
+
+## Free-tier notes
+
+GitHub Pages hosts the frontend only. Supabase quotas apply to database, storage, bandwidth and monthly active users; free projects may be paused after inactivity. Limits and plan policies can change.
