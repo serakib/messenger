@@ -14,6 +14,7 @@ Run these SQL files in order from **SQL Editor → New query**:
 2. `supabase/migrations/0002_message_attachments.sql`
 3. `supabase/migrations/0003_security_hardening.sql`
 4. `supabase/migrations/0004_member_preferences.sql`
+5. `supabase/migrations/0005_member_favourites.sql`
 
 The migrations create:
 - User profiles connected to Supabase Auth
@@ -23,7 +24,7 @@ The migrations create:
 - Realtime message publication
 - Email/password Auth and Phone OTP UI integration (SMS provider is configured separately)
 - Private-schema security helpers, trigger-function permission restrictions, and foreign-key indexes
-- Per-user pin, mute and archive preferences stored with conversation membership
+- Per-user pin, favourite, mute and archive preferences stored with conversation membership
 
 RLS must remain enabled. Do not disable it to make the app appear to work.
 
