@@ -82,9 +82,8 @@ export async function createConversation({ memberIds, title = null, type = 'dire
       uniqueMembers.map(user_id => ({ conversation_id: conversation.id, user_id, role: 'member' }))
     );
     if (memberError) {
-      // Do not leave an inaccessible half-created conversation behind.
-      await client.from('conversations').delete().eq('id', conversation.id);
-      throw memberError;
+      // The creator may remove this incomplete conversation from a future admin flow.
+      throw new Error(`Conversation was created, but adding members failed: ${memberError.message}`);
     }
   }
   return conversation;
