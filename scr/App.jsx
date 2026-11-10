@@ -324,13 +324,17 @@ function App() {
     let unsubscribe = () => {};
     getMessages(selectedId)
       .then(rows => {
-        if (active) setLiveMessages(previous => ({ ...previous, [selectedId]: rows }));
+        if (active) setLiveMessages(previous => {
+          const combined = new Map([...(previous[selectedId] || []), ...rows].map(item => [item.id, item]));
+          return { ...previous, [selectedId]: [...combined.values()].sort((a, b) => new Date(a.created_at) - new Date(b.created_at)) };
+        });
       })
       .catch(error => {
         if (active) setLiveError(error.message || 'Could not load messages.');
       });
     try {
       unsubscribe = subscribeToMessages(selectedId, incoming => {
+        setLiveChats(previous => previous.map(item => String(item.id) === String(selectedId) ? { ...item, preview: incoming.body || incoming.attachment_name || 'Attachment', time: formatRelative(incoming.created_at), latestAt: incoming.created_at, unread: incoming.sender_id !== currentUserId } : item));
         setLiveMessages(previous => {
           const existing = previous[selectedId] || [];
           if (existing.some(item => item.id === incoming.id)) return previous;
@@ -345,7 +349,7 @@ function App() {
       active = false;
       unsubscribe();
     };
-  }, [isLive, selectedId]);
+  }, [isLive, selectedId, currentUserId]);
 
   useEffect(() => {
     if (selectedId) {
@@ -404,6 +408,7 @@ function App() {
     if (!isLive) {
       setUnreadCounts(previous => ({ ...previous, [person.id]: 0 }));
     } else {
+      setLiveChats(previous => previous.map(item => String(item.id) === String(person.id) ? { ...item, unread: false } : item));
       markConversationRead(person.id).catch(() => {});
     }
   };
@@ -422,6 +427,7 @@ function App() {
             ? previous
             : { ...previous, [selected.id]: [...existing, sent] };
         });
+        setLiveChats(previous => previous.map(item => String(item.id) === String(selected.id) ? { ...item, preview: sent.body || sent.attachment_name || 'Attachment', time: formatRelative(sent.created_at), latestAt: sent.created_at, unread: false } : item));
         setMessage('');
         setShowEmoji(false);
       } catch (error) {
@@ -483,6 +489,12 @@ function App() {
   const startConversation = async person => {
     if (!isLive) {
       selectChat(person);
+      setShowNewChat(false);
+      return;
+    }
+    const existingConversation = liveChats.find(item => String(item.peerId) === String(person.id));
+    if (existingConversation) {
+      selectChat(existingConversation);
       setShowNewChat(false);
       return;
     }
@@ -598,7 +610,7 @@ function App() {
     }
   };
 
-  const visiblePeople = isLive ? livePeople : people;
+  const visiblePeople = (isLive ? livePeople : people).filter(person => String(person.display_name || person.name || '').toLowerCase().includes(search.trim().toLowerCase()));
   const unreadTotal = isLive
     ? liveChats.filter(person => person.unread).length
     : Object.values(unreadCounts).filter(value => Number(value) > 0).length;
@@ -646,7 +658,7 @@ function App() {
             <button className="icon-button" onClick={openNewChat} aria-label="New chat" title="New chat"><MessageSquarePlus size={19} /></button>
             <button className={'icon-button' + (inboxMenu ? ' active' : '')} onClick={() => setInboxMenu(!inboxMenu)} aria-label="More inbox options" title="More"><MoreHorizontal size={20} /></button>
             {inboxMenu && <div className="dropdown-menu inbox-dropdown">
-              <button onClick={() => { setUnreadCounts({}); notify('All demo chats marked as read'); setInboxMenu(false); }}><CheckCheck size={15} /> Mark all as read</button>
+              <button onClick={() => { if (isLive) { Promise.all(liveChats.map(item => markConversationRead(item.id))).then(() => setLiveChats(items => items.map(item => ({ ...item, unread: false })))).catch(() => notify('Could not mark every chat as read')); } else { setUnreadCounts({}); } notify('All chats marked as read'); setInboxMenu(false); }}><CheckCheck size={15} /> Mark all as read</button>
               <button onClick={() => { setShowArchived(!showArchived); setActiveNav('Chats'); setInboxMenu(false); }}><Archive size={15} /> {showArchived ? 'Back to chats' : 'Open archived'}</button>
               <button onClick={() => { setActiveNav('Settings'); setInboxMenu(false); }}><Settings size={15} /> Settings</button>
             </div>}
