@@ -81,7 +81,7 @@ function App() {
   const selectPerson = (id) => { setSelectedId(id); setMobileChat(true); setActiveNav('Chats'); setActiveMenu(false); };
   const addEmoji = (emoji) => setMessage(prev => prev + emoji);
 
-  return <div className={`app-shell ${dark ? 'dark' : ''}`}>
+  return <div className={`app-shell ${dark ? 'dark' : ''} ${showProfile ? 'has-details' : ''}`}>
     <aside className={`rail ${mobileChat ? 'rail-mobile-hidden' : ''}`}>
       <div className="brand-mark"><span className="brand-orbit"><MessageCircle size={21} strokeWidth={2.6}/></span><span>orbit</span></div>
       <button className={`rail-user ${activeNav === 'Profile' ? 'active' : ''}`} onClick={() => {setActiveNav('Profile');setMobileChat(false)}} title="Profile"><Avatar person={{name:'Rakib Hasan', initials:'RH', color:'purple'}} size="sm"/></button>
@@ -105,14 +105,14 @@ function App() {
         </div>
       </div>
       <div className="search-box"><Search size={17}/><input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search or start a new chat"/><kbd>⌘ K</kbd></div>
-      <div className="inbox-filters"><button className="filter-chip selected">All <span>12</span></button><button className="filter-chip" onClick={()=>notify('Unread filter preview')}>Unread</button><button className="filter-chip" onClick={()=>notify('Groups filter preview')}>Groups</button></div>
+      <div className="inbox-filters"><button className="filter-chip selected">All</button><button className="filter-chip" onClick={()=>notify('Unread filter preview')}>Unread</button><button className="filter-chip" onClick={()=>notify('Groups filter preview')}>Groups</button></div>
       {activeNav === 'Chats' ? <>
         <button className="archive-row" onClick={() => notify('Archived chats are empty in this preview')}>
-          <span className="archive-icon"><Archive size={18}/></span><strong>Archived</strong><span className="archive-count">1</span>
+          <span className="archive-icon"><Archive size={18}/></span><strong>Archived</strong><span className="archive-count"><ArrowUpRight size={15}/></span>
         </button>
-        <div className="section-caption recent-caption">ALL MESSAGES <span>{filteredPeople.length}</span></div>
+        <div className="section-caption recent-caption">MESSAGES <span>{filteredPeople.length}</span></div>
         <div className="people-list">
-          {filteredPeople.filter(p=>p.id!==1).map(p=><button key={p.id} className={`person-row ${selectedId===p.id?'chosen':''}`} onClick={()=>selectPerson(p.id)}>
+          {filteredPeople.map(p=><button key={p.id} className={`person-row ${selectedId===p.id?'chosen':''}`} onClick={()=>selectPerson(p.id)}>
             <div className="avatar-wrap"><Avatar person={p} showOnline/>{p.group && <span className="group-badge"><Users size={10}/></span>}</div>
             <div className="person-copy"><div className="person-top"><strong>{p.name}</strong><time>{p.time}</time></div><div className="person-preview">{p.preview}</div></div>
             {p.unread>0 && <span className="unread-badge">{p.unread}</span>}
