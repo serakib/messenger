@@ -14,6 +14,10 @@ The app is built with Vite and deployed to GitHub Pages from the `main` branch. 
 - Contact details, people, calls, notifications and settings previews
 - Light/dark theme and mobile layout
 
+## Backend foundation
+
+Supabase client configuration and service modules are included for Auth, profiles, conversations, messages, realtime message inserts and private attachment uploads. The current React interface is not yet connected to these services. Follow [the setup guide](docs/FREE_HOSTING_SETUP.md) when you are ready to create a Supabase project.
+
 ## Important limitations
 
 The current app does **not** yet provide real accounts, server-side message delivery, durable message history, file uploads, push notifications, real voice/video calls, or end-to-end encryption. Demo contacts and messages are hard-coded. Messages sent in the UI are lost on refresh. Do not use this prototype for private or sensitive communication.
