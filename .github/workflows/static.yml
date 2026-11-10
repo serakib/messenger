@@ -18,7 +18,7 @@ jobs:
   build-and-deploy:
     environment:
       name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+      url: \${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -32,8 +32,8 @@ jobs:
       - name: Build production app
         run: npm run build
         env:
-          VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
-          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ vars.VITE_SUPABASE_PUBLISHABLE_KEY || vars.VITE_SUPABASE_ANON_KEY }}
+          VITE_SUPABASE_URL: \${{ vars.VITE_SUPABASE_URL || 'https://kjzplvsadgqaxafaogkn.supabase.co' }}
+          VITE_SUPABASE_PUBLISHABLE_KEY: \${{ vars.VITE_SUPABASE_PUBLISHABLE_KEY || 'sb_publishable_fsgC4vQBEM50kXLT6ZMHxA_1wIIvvAZ' }}
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
       - name: Upload production build
