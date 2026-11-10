@@ -192,16 +192,20 @@ function App() {
   }, []);
 
   useEffect(() => {
-    const obsoleteKeys = [
-      'orbit.demo.messages.v2',
-      'orbit.demo.chats.v1',
-      'orbit.profile.name',
-      'orbit.archived.v1',
-      'orbit.pinned.v1',
-      'orbit.muted.v1',
-      'orbit.unread.v1'
-    ];
-    obsoleteKeys.forEach(key => window.localStorage.removeItem(key));
+    try {
+      const obsoleteKeys = [
+        'orbit.demo.messages.v2',
+        'orbit.demo.chats.v1',
+        'orbit.profile.name',
+        'orbit.archived.v1',
+        'orbit.pinned.v1',
+        'orbit.muted.v1',
+        'orbit.unread.v1'
+      ];
+      obsoleteKeys.forEach(key => window.localStorage.removeItem(key));
+    } catch {
+      // Ignore browsers that block local storage access.
+    }
   }, []);
 
   useEffect(() => {
@@ -695,7 +699,7 @@ function App() {
           })}
         </nav>
         <div className="rail-spacer" />
-        <button className="rail-button" title="Help" onClick={() => notify('Help: Orbit is currently in preview mode.')}><CircleHelp size={20} /></button>
+        <button className="rail-button" title="Help" onClick={() => notify('Help centre is not available yet.')}><CircleHelp size={20} /></button>
         <button className="rail-button" title={dark ? 'Switch to light theme' : 'Switch to dark theme'} onClick={() => setDark(!dark)}>{dark ? <Sun size={20} /> : <Moon size={20} />}</button>
         <button className="rail-bottom" onClick={() => { setActiveNav('Profile'); setMobileChat(false); }} title="Your account">
           <Avatar person={{ name: isLive ? currentUserName : 'Account', initials: isLive ? initialsFor(currentUserName) : 'U', color: 'purple' }} size="sm" />
@@ -719,7 +723,7 @@ function App() {
           </div>
         </div>
 
-        {(activeNav === 'Chats' || activeNav === 'People') && (
+        {isLive && (activeNav === 'Chats' || activeNav === 'People') && (
           <div className="search-box">
             <Search size={17} />
             <input ref={searchInputRef} value={search} onChange={event => setSearch(event.target.value)} placeholder={activeNav === 'People' ? 'Find people' : 'Search or start a new chat'} aria-label="Search" />
