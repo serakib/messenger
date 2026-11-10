@@ -81,3 +81,39 @@ body,.app-shell{background:#f0f2f5;color:#111b21}
 .dark .composer input::placeholder{color:#8696a0}.dark .rail-button{color:#aebac1}
 .dark .rail-button:hover,.dark .rail-button.active{background:#183d35;color:#4adbb4}
 .dark .icon-button{color:#aebac1}.dark .dropdown-menu,.dark .emoji-tray{background:#202c33;border-color:#303d45}
+
+
+/* Structural pass: WhatsApp Web-style three-column workspace */
+.app-shell{height:100dvh;min-height:560px;display:grid;grid-template-columns:64px 400px minmax(0,1fr);overflow:hidden}
+.rail{grid-column:1;grid-row:1;position:relative}
+.inbox-panel{grid-column:2;grid-row:1;width:auto;min-width:0;flex:none}
+.chat-panel{grid-column:3;grid-row:1;width:auto;min-width:0;min-height:0}
+.details-panel{grid-column:4;grid-row:1;width:320px;flex:none}
+.inbox-heading{height:62px;min-height:62px;padding:0 16px;border-bottom:1px solid #e9edef}
+.inbox-heading h1{font-size:21px;font-weight:600;letter-spacing:-.35px;margin:0}
+.inbox-heading-actions{display:flex;align-items:center;gap:4px}
+.inbox-heading-actions .icon-button{width:38px;height:38px}
+.search-box{margin-top:10px}
+.archive-row{width:100%;height:62px;display:flex;align-items:center;gap:14px;padding:0 19px;border:0;border-bottom:1px solid #f0f2f5;background:#fff;text-align:left;color:#111b21}
+.archive-row:hover{background:#f5f6f6}
+.archive-icon{width:42px;height:42px;display:grid;place-items:center;border-radius:50%;background:#f0f2f5;color:#54656f}
+.archive-row strong{font-size:14px;font-weight:500;flex:1}
+.archive-count{font-size:11px;color:#667781}
+.section-caption.recent-caption{padding:13px 16px 7px;font-size:10px}
+.chat-header{height:62px;min-height:62px}
+.messages-scroll{min-height:0}
+.message-stack{gap:8px}
+@media(min-width:1500px){.app-shell{grid-template-columns:64px 420px minmax(0,1fr)}.inbox-panel{width:auto;flex-basis:auto}.details-panel{width:320px}}
+@media(max-width:1180px){.app-shell{grid-template-columns:64px 350px minmax(0,1fr)}.inbox-panel{width:auto;flex-basis:auto}.details-panel{display:none}}
+@media(max-width:680px){
+  .app-shell{display:flex;grid-template-columns:none;height:100dvh;min-height:540px}
+  .rail{grid-column:auto;grid-row:auto}
+  .inbox-panel{grid-column:auto;grid-row:auto}
+  .chat-panel{grid-column:auto;grid-row:auto}
+  .inbox-heading{height:58px;min-height:58px;padding:0 12px}
+  .inbox-heading h1{font-size:20px}
+  .archive-row{height:58px;padding:0 13px}
+}
+.dark .archive-row{background:#202c33;color:#e9edef;border-color:#303d45}
+.dark .archive-row:hover{background:#2a3942}
+.dark .archive-icon{background:#2a3942;color:#aebac1}
