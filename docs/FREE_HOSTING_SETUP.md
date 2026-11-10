@@ -37,7 +37,7 @@ RLS is enabled. Do not disable it to make the app appear to work. Test with two 
 
 ## Current status
 
-The frontend has not yet been wired to these tables or to Supabase Auth. Creating the Supabase project and running the migration are required before real login or messaging can work. The SQL is a starting schema and should receive a security review and tests before handling sensitive conversations.
+The repository now includes a Supabase client, Auth helpers, and data-service functions for conversations, messages, realtime inserts, read positions and private attachments. The existing React screens are still a demo and are not yet connected to those services. Creating the Supabase project and running the migration are required before real login or messaging can work. The SQL is a starting schema and should receive a security review and tests before handling sensitive conversations.
 
 ## Free-tier cautions
 
