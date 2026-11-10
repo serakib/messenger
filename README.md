@@ -14,7 +14,6 @@ The app is built with Vite and deployed to GitHub Pages from the `main` branch.
 - Default dark theme, with a light-theme option
 - Contact search and All / Unread / Groups filters
 - Working local pin, mute and archive controls
-- Local demo message history persisted in the browser
 - Email/password sign-up and sign-in
 - Phone-number sign-in and sign-up UI with SMS OTP verification (requires a configured Supabase SMS provider)
 - Supabase profile discovery, direct conversations and group conversations when configured
@@ -50,7 +49,7 @@ Never put a Supabase service-role key in browser code or GitHub Pages.
 - Message editing/deletion, reactions and reply threads
 - A production moderation/reporting workflow
 
-The sample contacts are fictional demo data. Until users sign in, messages are stored only in the current browser. Do not use demo mode for private or sensitive communication.
+The app requires an authenticated Orbit account to access conversations and member search. It does not create sample chats or fake call/notification activity. Audio/video calling, browser push notifications and end-to-end encryption are not implemented.
 
 ## Development
 
