@@ -1,6 +1,6 @@
 # Orbit — Messenger
 
-Orbit is a mobile-responsive React messenger interface with a local demo mode and an optional Supabase-backed account and messaging flow.
+Orbit is a mobile-responsive React messenger interface with a local demo mode and a Supabase-backed account and messaging flow.
 
 ## Live deployment
 
@@ -23,16 +23,19 @@ The app is built with Vite and deployed to GitHub Pages from the `main` branch.
 
 ## Backend setup
 
-The repository includes the SQL schema, Supabase client, Auth helpers and chat services. To activate real accounts and cross-device messaging:
+The Supabase project for this deployment has been created and the three schema migrations have been applied. To recreate the database in a new Supabase project, run these files in order:
 
-1. Create a Supabase project.
-2. Run `supabase/migrations/0001_initial_schema.sql`.
-3. Run `supabase/migrations/0002_message_attachments.sql`.
-4. Add `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` as GitHub Actions repository Variables. Use the Supabase `sb_publishable_...` key, never a secret/service-role key.
-5. Set the Supabase Auth Site URL and Redirect URL to `https://serakib.github.io/messenger/`.
-6. Run **Actions → Build and deploy Orbit to GitHub Pages → Run workflow** so the new variables are included in the deployed build.
+1. `supabase/migrations/0001_initial_schema.sql`
+2. `supabase/migrations/0002_message_attachments.sql`
+3. `supabase/migrations/0003_security_hardening.sql`
 
-See [the complete setup guide](docs/FREE_HOSTING_SETUP.md).
+The GitHub Pages workflow contains the project's public Supabase URL and publishable client key as build defaults. Optional GitHub Actions repository Variables named `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` can override them. These are public browser configuration values; never use a `sb_secret_...` key, `service_role` key, or database password in this frontend or in GitHub Pages.
+
+In Supabase **Authentication → URL Configuration**, set the Site URL and allowed Redirect URL to:
+
+`https://serakib.github.io/messenger/`
+
+Keep the Email provider enabled. For real sign-up tests, use email addresses that can receive the confirmation link.
 
 Never put a Supabase service-role key in browser code or GitHub Pages.
 
@@ -46,7 +49,7 @@ Never put a Supabase service-role key in browser code or GitHub Pages.
 - Message editing/deletion, reactions and reply threads
 - A production moderation/reporting workflow
 
-The sample contacts are fictional demo data. Until Supabase is configured and users sign in, messages are stored only in the current browser. Do not use demo mode for private or sensitive communication.
+The sample contacts are fictional demo data. Until users sign in, messages are stored only in the current browser. Do not use demo mode for private or sensitive communication.
 
 ## Development
 
