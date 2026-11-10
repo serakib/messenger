@@ -15,36 +15,9 @@ import {
 } from './services/auth.js';
 import {
   listMyConversations, getMessages, sendMessage, createConversation,
-  markConversationRead, subscribeToMessages, subscribeToMyMessages, searchProfiles,
-  sendAttachmentMessage, createAttachmentUrl
+  markConversationRead, updateConversationPreference, subscribeToMessages,
+  subscribeToMyMessages, searchProfiles, sendAttachmentMessage, createAttachmentUrl
 } from './services/chat.js';
-
-const people = [
-  { id: 1, name: 'Ava Mitchell', initials: 'AM', color: 'lavender', online: true, unread: 2, time: '2m', preview: 'That sounds like a plan ✨', status: 'Online now' },
-  { id: 2, name: 'Noah Williams', initials: 'NW', color: 'peach', online: true, unread: 0, time: '14m', preview: 'Sent you the photos', status: 'Active 2 min ago' },
-  { id: 3, name: 'Design Buddies', initials: 'DB', color: 'mint', online: false, unread: 4, time: '28m', preview: 'Mia: new mockups are ready', status: '5 members', group: true },
-  { id: 4, name: 'Mia Chen', initials: 'MC', color: 'rose', online: false, unread: 0, time: '1h', preview: 'You: Thank you so much!', status: 'Active 1 hour ago' },
-  { id: 5, name: 'Oliver James', initials: 'OJ', color: 'blue', online: true, unread: 0, time: '3h', preview: 'Voice message · 0:18', status: 'Online now' },
-  { id: 6, name: 'Sofia Rivera', initials: 'SR', color: 'gold', online: false, unread: 0, time: 'Yesterday', preview: 'See you tomorrow 👋', status: 'Active yesterday' },
-  { id: 7, name: 'Ethan Brooks', initials: 'EB', color: 'teal', online: false, unread: 0, time: 'Tue', preview: 'Thanks for the update', status: 'Active Tuesday' }
-];
-
-const seedMessages = {
-  1: [
-    { id: 1, from: 'them', text: 'Hey! How is your new project going?', time: '10:41 AM' },
-    { id: 2, from: 'me', text: 'Pretty well! I’m shaping the first design right now.', time: '10:42 AM', seen: true },
-    { id: 3, from: 'them', text: 'That sounds like a plan ✨', time: '10:43 AM' }
-  ],
-  2: [
-    { id: 1, from: 'them', text: 'Hey, I sent you the photos from yesterday.', time: '10:22 AM' },
-    { id: 2, from: 'me', text: 'Amazing, I’ll check them out!', time: '10:24 AM', seen: true }
-  ],
-  3: [
-    { id: 1, from: 'them', text: 'Morning everyone! Here are the latest updates.', time: '9:15 AM' },
-    { id: 2, from: 'me', text: 'The new direction is looking great.', time: '9:21 AM', seen: true },
-    { id: 3, from: 'them', text: 'Mia: new mockups are ready', time: '9:24 AM' }
-  ]
-};
 
 const navigation = [
   { id: 'Chats', icon: MessageCircle },
@@ -122,8 +95,11 @@ function mapConversation(conversation, userId) {
     initials: initialsFor(name),
     color: colorFor(name),
     online: false,
-    status: conversation.type === 'group' ? members.length + ' members' : 'Orbit member',
+    status: conversation.type === 'group' ? members.length + ' members' : 'Member',
     group: conversation.type === 'group',
+    is_pinned: Boolean(conversation.is_pinned),
+    is_muted: Boolean(conversation.is_muted),
+    is_archived: Boolean(conversation.is_archived),
     peerId: otherMember?.user_id || null,
     avatarUrl: profile.avatar_url || null,
     preview: latest?.body || latest?.attachment_name || 'No messages yet',
@@ -147,17 +123,10 @@ function Avatar({ person, size = 'md', showOnline = false }) {
 
 function App() {
   const [activeNav, setActiveNav] = useState('Chats');
-  const [selectedId, setSelectedId] = useState(1);
+  const [selectedId, setSelectedId] = useState(null);
   const [search, setSearch] = useState('');
   const [message, setMessage] = useState('');
-  const [demoMessages, setDemoMessages] = useStoredState('orbit.demo.messages.v2', seedMessages);
-  const [demoChats, setDemoChats] = useStoredState('orbit.demo.chats.v1', people);
   const [dark, setDark] = useStoredState('orbit.theme.v2', true);
-  const [profileName, setProfileName] = useStoredState('orbit.profile.name', 'Rakib Hasan');
-  const [archivedIds, setArchivedIds] = useStoredState('orbit.archived.v1', []);
-  const [pinnedIds, setPinnedIds] = useStoredState('orbit.pinned.v1', []);
-  const [mutedIds, setMutedIds] = useStoredState('orbit.muted.v1', []);
-  const [unreadCounts, setUnreadCounts] = useStoredState('orbit.unread.v1', { 1: 2, 3: 4 });
   const [filter, setFilter] = useState('all');
   const [showArchived, setShowArchived] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
@@ -173,7 +142,6 @@ function App() {
   const [activeMenu, setActiveMenu] = useState(false);
   const [inboxMenu, setInboxMenu] = useState(false);
   const [showEmoji, setShowEmoji] = useState(false);
-  const [callModal, setCallModal] = useState('');
   const [settingsTab, setSettingsTab] = useState('Appearance');
   const [authMode, setAuthMode] = useState('signin');
   const [authMethod, setAuthMethod] = useState('email');
@@ -194,6 +162,7 @@ function App() {
   const [liveChats, setLiveChats] = useState([]);
   const [liveMessages, setLiveMessages] = useState({});
   const [livePeople, setLivePeople] = useState([]);
+  const [peopleLoading, setPeopleLoading] = useState(false);
   const [liveLoading, setLiveLoading] = useState(false);
   const [liveError, setLiveError] = useState('');
   const [sendBusy, setSendBusy] = useState(false);
@@ -208,8 +177,8 @@ function App() {
 
   const isLive = Boolean(session?.user?.id);
   const currentUserId = session?.user?.id;
-  const currentUserName = profileData?.display_name || session?.user?.user_metadata?.display_name || session?.user?.email?.split('@')[0] || 'Account';
-  const chatItems = isLive ? liveChats : demoChats;
+  const currentUserName = profileData?.display_name || session?.user?.user_metadata?.display_name || session?.user?.email?.split('@')[0] || session?.user?.phone || 'Account';
+  const chatItems = isLive ? liveChats : [];
   const selected = chatItems.find(person => String(person.id) === String(selectedId)) || null;
 
   const notify = (text) => {
@@ -256,6 +225,7 @@ function App() {
       setLiveChats([]);
       setLiveMessages({});
       setLivePeople([]);
+      setSelectedId(null);
       return undefined;
     }
     let active = true;
@@ -286,10 +256,12 @@ function App() {
   useEffect(() => {
     if (!isLive || activeNav !== 'People') return undefined;
     let active = true;
+    setPeopleLoading(true);
     const timer = window.setTimeout(() => {
       searchProfiles(search)
         .then(results => { if (active) setLivePeople(results); })
-        .catch(error => { if (active) setLiveError(error.message || 'Could not search members.'); });
+        .catch(error => { if (active) setLiveError(error.message || 'Could not search members.'); })
+        .finally(() => { if (active) setPeopleLoading(false); });
     }, 220);
     return () => {
       active = false;
@@ -314,8 +286,7 @@ function App() {
   }, [isLive, showNewChat, newChatSearch]);
 
   const currentMessages = useMemo(() => {
-    if (!selected) return [];
-    if (!isLive) return demoMessages[selected.id] || [];
+    if (!selected || !isLive) return [];
     return (liveMessages[selected.id] || []).map(item => ({
       id: item.id,
       from: item.sender_id === currentUserId ? 'me' : 'them',
@@ -327,7 +298,7 @@ function App() {
       attachment_size: item.attachment_size,
       created_at: item.created_at
     }));
-  }, [selected, isLive, demoMessages, liveMessages, currentUserId]);
+  }, [selected, isLive, liveMessages, currentUserId]);
 
   useEffect(() => {
     if (!isLive) return undefined;
@@ -392,7 +363,6 @@ function App() {
       }
       if (event.key === 'Escape') {
         setShowNewChat(false);
-        setCallModal('');
         setActiveMenu(false);
         setInboxMenu(false);
         setShowEmoji(false);
@@ -405,25 +375,22 @@ function App() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
+  const archivedCount = liveChats.filter(person => person.is_archived).length;
   const filteredPeople = useMemo(() => {
     const query = search.trim().toLowerCase();
-    let result = chatItems.filter(person => {
-      const archived = archivedIds.map(String).includes(String(person.id));
-      if (showArchived !== archived) return false;
-      if (filter === 'unread' && !(isLive ? person.unread : Number(unreadCounts[person.id] || 0) > 0)) return false;
-      if (filter === 'groups' && !person.group) return false;
-      if (query && !(person.name.toLowerCase().includes(query) || String(person.preview || '').toLowerCase().includes(query))) return false;
-      return true;
-    });
-    const pins = pinnedIds.map(String);
-    result = [...result].sort((a, b) => {
-      const aPinned = pins.includes(String(a.id)) ? 1 : 0;
-      const bPinned = pins.includes(String(b.id)) ? 1 : 0;
-      if (aPinned !== bPinned) return bPinned - aPinned;
-      return new Date(b.latestAt || 0) - new Date(a.latestAt || 0);
-    });
-    return result;
-  }, [chatItems, archivedIds, pinnedIds, filter, search, showArchived, isLive, unreadCounts]);
+    return [...chatItems]
+      .filter(person => {
+        if (Boolean(person.is_archived) !== showArchived) return false;
+        if (filter === 'unread' && !person.unread) return false;
+        if (filter === 'groups' && !person.group) return false;
+        if (query && !(person.name.toLowerCase().includes(query) || String(person.preview || '').toLowerCase().includes(query))) return false;
+        return true;
+      })
+      .sort((a, b) => {
+        if (Boolean(a.is_pinned) !== Boolean(b.is_pinned)) return a.is_pinned ? -1 : 1;
+        return new Date(b.latestAt || 0) - new Date(a.latestAt || 0);
+      });
+  }, [chatItems, filter, search, showArchived]);
 
   const selectChat = (person) => {
     setSelectedId(person.id);
@@ -433,91 +400,68 @@ function App() {
     setMobileChat(true);
     setActiveMenu(false);
     setInboxMenu(false);
-    if (!isLive) {
-      setUnreadCounts(previous => ({ ...previous, [person.id]: 0 }));
-    } else {
-      setLiveChats(previous => previous.map(item => String(item.id) === String(person.id) ? { ...item, unread: false } : item));
-      markConversationRead(person.id).catch(() => {});
-    }
+    setLiveChats(previous => previous.map(item => String(item.id) === String(person.id) ? { ...item, unread: false } : item));
+    markConversationRead(person.id).catch(error => setLiveError(error.message || 'Could not update read status.'));
   };
 
   const sendMessageNow = async event => {
     event?.preventDefault();
     const text = message.trim();
-    if (!text || !selected || sendBusy) return;
-    if (isLive) {
-      setSendBusy(true);
-      try {
-        const sent = await sendMessage(selected.id, text);
-        setLiveMessages(previous => {
-          const existing = previous[selected.id] || [];
-          return existing.some(item => item.id === sent.id)
-            ? previous
-            : { ...previous, [selected.id]: [...existing, sent] };
-        });
-        setLiveChats(previous => previous.map(item => String(item.id) === String(selected.id) ? { ...item, preview: sent.body || sent.attachment_name || 'Attachment', time: formatRelative(sent.created_at), latestAt: sent.created_at, unread: false } : item));
-        setMessage('');
-        setShowEmoji(false);
-      } catch (error) {
-        notify(error.message || 'Message could not be sent.');
-      } finally {
-        setSendBusy(false);
-      }
-      return;
+    if (!text || !selected || !isLive || sendBusy) return;
+    setSendBusy(true);
+    try {
+      const sent = await sendMessage(selected.id, text);
+      setLiveMessages(previous => {
+        const existing = previous[selected.id] || [];
+        return existing.some(item => item.id === sent.id)
+          ? previous
+          : { ...previous, [selected.id]: [...existing, sent] };
+      });
+      setLiveChats(previous => previous.map(item => String(item.id) === String(selected.id)
+        ? { ...item, preview: sent.body || sent.attachment_name || 'Attachment', time: formatRelative(sent.created_at), latestAt: sent.created_at, unread: false }
+        : item));
+      setMessage('');
+      setShowEmoji(false);
+    } catch (error) {
+      notify(error.message || 'Message could not be sent.');
+    } finally {
+      setSendBusy(false);
     }
-    const createdAt = new Date().toISOString();
-    const item = {
-      id: Date.now(),
-      from: 'me',
-      text,
-      time: formatClock(createdAt),
-      created_at: createdAt,
-      seen: false
-    };
-    setDemoMessages(previous => ({ ...previous, [selected.id]: [...(previous[selected.id] || []), item] }));
-    setDemoChats(previous => previous.map(person => String(person.id) === String(selected.id)
-      ? { ...person, preview: text, time: formatRelative(createdAt), latestAt: createdAt, unread: 0 }
-      : person));
-    setMessage('');
-    setShowEmoji(false);
   };
 
-  const toggleId = (setter, id) => setter(previous => {
-    const exists = previous.map(String).includes(String(id));
-    return exists ? previous.filter(item => String(item) !== String(id)) : [...previous, id];
-  });
-
-  const togglePin = () => {
-    if (!selected) return;
-    const isPinned = pinnedIds.map(String).includes(String(selected.id));
-    toggleId(setPinnedIds, selected.id);
-    notify(isPinned ? 'Chat unpinned' : 'Chat pinned');
-    setActiveMenu(false);
+  const updatePreference = async (field, successMessage) => {
+    if (!selected || !isLive) return;
+    const nextValue = !Boolean(selected[field]);
+    try {
+      await updateConversationPreference(selected.id, { [field]: nextValue });
+      setLiveChats(previous => previous.map(item => String(item.id) === String(selected.id)
+        ? { ...item, [field]: nextValue }
+        : item));
+      if (field === 'is_archived') {
+        setShowArchived(nextValue);
+        setMobileChat(false);
+      }
+      notify(successMessage(nextValue));
+      setActiveMenu(false);
+    } catch (error) {
+      notify(error.message || 'Could not update conversation settings.');
+    }
   };
 
-  const toggleMute = () => {
-    if (!selected) return;
-    const isMuted = mutedIds.map(String).includes(String(selected.id));
-    toggleId(setMutedIds, selected.id);
-    notify(isMuted ? 'Notifications unmuted on this device' : 'Notifications muted on this device');
-    setActiveMenu(false);
-  };
-
-  const toggleArchive = () => {
-    if (!selected) return;
-    const isArchived = archivedIds.map(String).includes(String(selected.id));
-    toggleId(setArchivedIds, selected.id);
-    notify(isArchived ? 'Chat restored from archive' : 'Chat moved to archive');
-    setActiveMenu(false);
-    if (!isArchived) setMobileChat(false);
-    else setShowArchived(true);
-  };
+  const togglePin = () => updatePreference('is_pinned', value => value ? 'Chat pinned' : 'Chat unpinned');
+  const toggleMute = () => updatePreference('is_muted', value => value ? 'Notifications muted' : 'Notifications unmuted');
+  const toggleArchive = () => updatePreference('is_archived', value => value ? 'Chat archived' : 'Chat restored');
 
   const openNewChat = () => {
     setNewChatSearch('');
     setNewChatMode('direct');
     setGroupTitle('');
     setGroupMemberIds([]);
+    if (!isLive) {
+      setActiveNav('Profile');
+      notify('Sign in to start a conversation.');
+      return;
+    }
     setShowNewChat(true);
     setInboxMenu(false);
   };
@@ -530,31 +474,14 @@ function App() {
 
   const createGroupChat = async () => {
     const memberIds = [...new Set(groupMemberIds)];
-    if (!memberIds.length || newChatLoading) return;
-    const title = groupTitle.trim().slice(0, 80) || 'New group';
     if (!isLive) {
-      const createdAt = new Date().toISOString();
-      const group = {
-        id: 'demo-group-' + Date.now(),
-        name: title,
-        initials: initialsFor(title),
-        color: colorFor(title),
-        online: false,
-        unread: 0,
-        time: formatRelative(createdAt),
-        latestAt: createdAt,
-        preview: 'Group created',
-        status: (memberIds.length + 1) + ' members',
-        group: true
-      };
-      setDemoChats(previous => [group, ...previous]);
-      setDemoMessages(previous => ({ ...previous, [group.id]: [] }));
+      setActiveNav('Profile');
       setShowNewChat(false);
-      setNewChatMode('direct');
-      selectChat(group);
-      notify('Group created on this device');
+      notify('Sign in to create a group.');
       return;
     }
+    if (!memberIds.length || newChatLoading) return;
+    const title = groupTitle.trim().slice(0, 80) || 'New group';
     setNewChatLoading(true);
     try {
       const conversation = await createConversation({ memberIds, title, type: 'group' });
@@ -576,11 +503,7 @@ function App() {
   };
 
   const startConversation = async person => {
-    if (!isLive) {
-      selectChat(person);
-      setShowNewChat(false);
-      return;
-    }
+    if (!isLive) return;
     const existingConversation = liveChats.find(item => String(item.peerId) === String(person.id));
     if (existingConversation) {
       selectChat(existingConversation);
@@ -609,17 +532,7 @@ function App() {
     const file = event.target.files?.[0];
     event.target.value = '';
     if (!file || !selected) return;
-    if (!isLive) {
-      const item = {
-        id: Date.now(),
-        from: 'me',
-        text: 'Attachment selected: ' + file.name + ' (demo only)',
-        time: new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
-      };
-      setDemoMessages(previous => ({ ...previous, [selected.id]: [...(previous[selected.id] || []), item] }));
-      notify('Demo attachment added to this device');
-      return;
-    }
+    if (!isLive) return;
     setAttachmentBusy(true);
     try {
       const sent = await sendAttachmentMessage(selected.id, file);
@@ -716,8 +629,11 @@ function App() {
     try {
       await signOut();
       setSession(null);
-      setSelectedId(1);
-      setActiveNav('Chats');
+      setSelectedId(null);
+      setLiveChats([]);
+      setLiveMessages({});
+      setLivePeople([]);
+      setActiveNav('Profile');
       setMobileChat(false);
       notify('Signed out');
     } catch (error) {
@@ -737,13 +653,11 @@ function App() {
     }
   };
 
-  const visiblePeople = (isLive ? livePeople : people).filter(person => String(person.display_name || person.name || '').toLowerCase().includes(search.trim().toLowerCase()));
-  const unreadTotal = isLive
-    ? liveChats.filter(person => person.unread).length
-    : Object.values(unreadCounts).filter(value => Number(value) > 0).length;
-  const isSelectedPinned = selected && pinnedIds.map(String).includes(String(selected.id));
-  const isSelectedMuted = selected && mutedIds.map(String).includes(String(selected.id));
-  const isSelectedArchived = selected && archivedIds.map(String).includes(String(selected.id));
+  const visiblePeople = livePeople;
+  const unreadTotal = liveChats.filter(person => person.unread).length;
+  const isSelectedPinned = Boolean(selected?.is_pinned);
+  const isSelectedMuted = Boolean(selected?.is_muted);
+  const isSelectedArchived = Boolean(selected?.is_archived);
 
   return (
     <div className={'app-shell ' + (dark ? 'dark' : 'light') + (showDetails ? ' has-details' : '')}>
@@ -753,7 +667,7 @@ function App() {
           <span>orbit</span>
         </div>
         <button className={'rail-user' + (activeNav === 'Profile' ? ' active' : '')} onClick={() => { setActiveNav('Profile'); setMobileChat(false); }} title="Account">
-          {isLive ? <Avatar person={{ name: currentUserName, initials: initialsFor(currentUserName), color: 'purple' }} size="sm" /> : <Avatar person={{ name: profileName, initials: initialsFor(profileName), color: 'purple' }} size="sm" />}
+          <Avatar person={{ name: isLive ? currentUserName : 'Account', initials: isLive ? initialsFor(currentUserName) : 'U', color: 'purple' }} size="sm" />
         </button>
         <div className="rail-divider" />
         <nav className="rail-navigation" aria-label="Main navigation">
@@ -771,7 +685,7 @@ function App() {
         <button className="rail-button" title="Help" onClick={() => notify('Help: Orbit is currently in preview mode.')}><CircleHelp size={20} /></button>
         <button className="rail-button" title={dark ? 'Switch to light theme' : 'Switch to dark theme'} onClick={() => setDark(!dark)}>{dark ? <Sun size={20} /> : <Moon size={20} />}</button>
         <button className="rail-bottom" onClick={() => { setActiveNav('Profile'); setMobileChat(false); }} title="Your account">
-          {isLive ? <Avatar person={{ name: currentUserName, initials: initialsFor(currentUserName), color: 'purple' }} size="sm" /> : <Avatar person={{ name: profileName, initials: initialsFor(profileName), color: 'purple' }} size="sm" />}
+          <Avatar person={{ name: isLive ? currentUserName : 'Account', initials: isLive ? initialsFor(currentUserName) : 'U', color: 'purple' }} size="sm" />
         </button>
       </aside>
 
@@ -779,7 +693,7 @@ function App() {
         <div className="inbox-heading">
           <div className="heading-title-wrap">
             <h1>{showArchived ? 'Archived' : activeNav === 'Chats' ? 'Chats' : activeNav === 'People' ? 'People' : activeNav}</h1>
-            {activeNav === 'Chats' && !showArchived && <span className="heading-count">{chatItems.length}</span>}
+            {activeNav === 'Chats' && isLive && !showArchived && <span className="heading-count">{filteredPeople.length}</span>}
           </div>
           <div className="inbox-heading-actions">
             <button className="icon-button" onClick={openNewChat} aria-label="New chat" title="New chat"><MessageSquarePlus size={19} /></button>
@@ -803,18 +717,18 @@ function App() {
 
         {activeNav === 'Chats' && (
           <>
-            {!showArchived && (
+            {isLive && !showArchived && (
               <div className="inbox-filters" role="tablist" aria-label="Chat filters">
                 <button className={'filter-chip' + (filter === 'all' ? ' selected' : '')} onClick={() => setFilter('all')}>All</button>
                 <button className={'filter-chip' + (filter === 'unread' ? ' selected' : '')} onClick={() => setFilter('unread')}>Unread {unreadTotal > 0 && <span>{unreadTotal}</span>}</button>
                 <button className={'filter-chip' + (filter === 'groups' ? ' selected' : '')} onClick={() => setFilter('groups')}>Groups</button>
               </div>
             )}
-            {!showArchived && <button className="archive-row" onClick={() => { setShowArchived(true); setFilter('all'); setSearch(''); }}>
-              <span className="archive-icon"><Archive size={18} /></span><strong>Archived</strong><span className="archive-count">{archivedIds.length || ''}<ArrowUpRight size={14} /></span>
+            {isLive && !showArchived && archivedCount > 0 && <button className="archive-row" onClick={() => { setShowArchived(true); setFilter('all'); setSearch(''); }}>
+              <span className="archive-icon"><Archive size={18} /></span><strong>Archived</strong><span className="archive-count">{archivedCount}<ArrowUpRight size={14} /></span>
             </button>}
             {showArchived && <button className="archive-back" onClick={() => setShowArchived(false)}><ChevronLeft size={16} /> Back to chats</button>}
-            <div className="section-caption recent-caption">{showArchived ? 'ARCHIVED CONVERSATIONS' : 'MESSAGES'} <span>{filteredPeople.length}</span></div>
+            {isLive && <div className="section-caption recent-caption">{showArchived ? 'ARCHIVED CONVERSATIONS' : 'MESSAGES'} <span>{filteredPeople.length}</span></div>}
             <div className="people-list">
               {filteredPeople.map(person => (
                 <button key={person.id} className={'person-row' + (String(selectedId) === String(person.id) && !showArchived ? ' chosen' : '')} onClick={() => selectChat(person)}>
@@ -823,34 +737,38 @@ function App() {
                     <div className="person-top"><strong>{person.name}</strong><time>{person.time}</time></div>
                     <div className="person-preview">{person.preview}</div>
                   </div>
-                  {pinnedIds.map(String).includes(String(person.id)) && <Pin size={12} className="row-pin" />}
-                  {(isLive ? person.unread : Number(unreadCounts[person.id] || 0) > 0) && <span className="unread-badge">{isLive ? '•' : unreadCounts[person.id]}</span>}
+                  {person.is_pinned && <Pin size={12} className="row-pin" />}
+                  {person.unread && <span className="unread-badge">•</span>}
                 </button>
               ))}
-              {filteredPeople.length === 0 && <div className="empty-search"><SearchX size={27} /><p>{showArchived ? 'No archived chats' : filter === 'unread' ? 'You are all caught up' : 'No conversations found'}</p><small>{showArchived ? 'Archived chats will appear here.' : 'Try another search or start a new chat.'}</small></div>}
+              {!isLive && <div className="empty-account-state"><ShieldCheck size={24} /><strong>Sign in to see your conversations</strong><span>Your chats will appear here after you sign in.</span><button className="primary-button" onClick={() => setActiveNav('Profile')}>Sign in</button></div>}
+              {isLive && liveLoading && <div className="modal-loading"><LoaderCircle size={19} className="spin" /> Loading conversations…</div>}
+              {isLive && !liveLoading && filteredPeople.length === 0 && <div className="empty-search"><SearchX size={27} /><p>{showArchived ? 'No archived conversations' : filter === 'unread' ? 'You are all caught up' : filter === 'groups' ? 'No group conversations yet' : 'No conversations yet'}</p><small>{showArchived ? 'Conversations you archive will appear here.' : filter === 'unread' ? 'New unread messages will appear here.' : 'Start a conversation with someone on Orbit.'}</small></div>}
             </div>
-            <div className="inbox-footer"><span className="secure-dot" /><span>{isLive ? 'Connected to your account' : 'Demo data · saved on this device'}</span><ShieldCheck size={14} /></div>
+            {isLive && <div className="inbox-footer"><span className="secure-dot" /><span>Connected to your account</span><ShieldCheck size={14} /></div>}
           </>
         )}
 
         {activeNav === 'People' && (
           <div className="section-preview people-directory">
-            <div className="preview-intro"><span className="section-icon"><Users size={20} /></span><div><h2>{isLive ? 'Find people' : 'Your people'}</h2><p>{isLive ? 'Search members who have joined Orbit.' : 'Sample contacts for exploring the interface.'}</p></div></div>
+            <div className="preview-intro"><span className="section-icon"><Users size={20} /></span><div><h2>Find people</h2><p>Search registered Orbit members.</p></div></div>
+            {!isLive && <div className="empty-account-state"><Users size={24} /><strong>Sign in to find people</strong><span>Only registered members are listed.</span><button className="primary-button" onClick={() => setActiveNav('Profile')}>Sign in</button></div>}
             {isLive && liveError && <div className="inline-error">{liveError}</div>}
+            {isLive && peopleLoading && <div className="modal-loading"><LoaderCircle size={19} className="spin" /> Searching members…</div>}
             {visiblePeople.map(person => (
               <div className="people-preview-row" key={person.id}>
                 <Avatar person={person} showOnline />
                 <div className="directory-copy"><strong>{person.display_name || person.name}</strong><small>{person.username ? '@' + person.username : person.status}</small></div>
-                <button onClick={() => isLive ? startConversation(person) : selectChat(person)}><MessageCircle size={15} /> Message</button>
+                <button onClick={() => startConversation(person)}><MessageCircle size={15} /> Message</button>
               </div>
             ))}
-            {isLive && !visiblePeople.length && <div className="empty-search"><Users size={24} /><p>No members found</p><small>Try another name or invite someone to join.</small></div>}
+            {isLive && !peopleLoading && !visiblePeople.length && <div className="empty-search"><Users size={24} /><p>{search.trim() ? 'No members found' : 'No other members yet'}</p><small>{search.trim() ? 'Try another name or username.' : 'When people create Orbit accounts, they will appear here.'}</small></div>}
           </div>
         )}
 
-        {activeNav === 'Calls' && <SectionPreview activeNav="Calls" notify={notify} openCall={kind => setCallModal(kind)} />}
-        {activeNav === 'Notifications' && <SectionPreview activeNav="Notifications" notify={notify} />}
-        {activeNav === 'Settings' && <SettingsSection settingsTab={settingsTab} setSettingsTab={setSettingsTab} dark={dark} setDark={setDark} notify={notify} />}
+        {activeNav === 'Calls' && <SectionPreview activeNav="Calls" />}
+        {activeNav === 'Notifications' && <SectionPreview activeNav="Notifications" />}
+        {activeNav === 'Settings' && <SettingsSection settingsTab={settingsTab} setSettingsTab={setSettingsTab} dark={dark} setDark={setDark} />}
         {activeNav === 'Profile' && (
           <div className="section-preview profile-preview">
             {!authReady ? (
@@ -860,7 +778,7 @@ function App() {
                 <div className="profile-cover" />
                 <Avatar person={{ name: currentUserName, initials: initialsFor(currentUserName), color: 'purple' }} size="xl" />
                 <h2>{currentUserName}</h2><p>{session.user.email || session.user.phone || ''}</p>
-                <span className="profile-status"><span className="status-dot" /> Signed in</span>
+                <span className="profile-status"><span className="status-dot" /> Account active</span>
                 <div className="account-card">
                   {profileEdit ? (
                     <form className="profile-edit-form" onSubmit={saveProfile}>
@@ -917,9 +835,6 @@ function App() {
               <button className="mobile-back icon-button" onClick={() => setMobileChat(false)} aria-label="Back to conversations"><ChevronLeft size={21} /></button>
               <div className="chat-person"><Avatar person={selected} showOnline /><div><strong>{selected.name}</strong><span className={selected.online ? 'status-online' : ''}>{selected.online ? 'Online now' : selected.status}</span></div></div>
               <div className="header-actions">
-                <button className="icon-button call-action" onClick={() => setCallModal('Audio call')} title="Audio call"><PhoneCall size={18} /></button>
-                <button className="icon-button call-action" onClick={() => setCallModal('Video call')} title="Video call"><Video size={19} /></button>
-                <span className="header-separator" />
                 <button className={'icon-button' + (showDetails ? ' tinted' : '')} onClick={() => setShowDetails(!showDetails)} title="Contact details" aria-label="Contact details"><SlidersHorizontal size={18} /></button>
                 <button className="icon-button" onClick={() => setActiveMenu(!activeMenu)} title="More options" aria-label="More chat options"><MoreVertical size={19} /></button>
                 {activeMenu && <div className="dropdown-menu chat-dropdown">
@@ -933,8 +848,7 @@ function App() {
             </header>
 
             <div className="messages-scroll">
-              <div className="date-pill">TODAY</div>
-              <div className="encryption-note"><ShieldCheck size={14} /> {isLive ? 'Messages are stored in your Orbit conversation.' : 'Demo conversation · Messages stay on this device.'}</div>
+              <div className="encryption-note"><ShieldCheck size={14} /> Messages are synced to this conversation. End-to-end encryption is not enabled.</div>
               <div className="message-stack">
                 {currentMessages.map(item => (
                   <div key={item.id} className={'message-line ' + (item.from === 'me' ? 'outgoing' : 'incoming')}>
@@ -948,11 +862,11 @@ function App() {
                           <Download size={16} />
                         </button>
                       )}
-                      <div className="message-meta">{item.time}{item.from === 'me' && <CheckCheck size={13} className={item.seen ? 'read-check' : ''} />}</div>
+                      <div className="message-meta">{item.time}</div>
                     </div>
                   </div>
                 ))}
-                {currentMessages.length === 0 && <div className="empty-thread"><div className="empty-thread-icon"><MessageCircle size={27} /></div><h3>Start the conversation</h3><p>Send a message to say hello.</p></div>}
+                {currentMessages.length === 0 && <div className="empty-thread"><div className="empty-thread-icon"><MessageCircle size={27} /></div><h3>Start the conversation</h3><p>Messages you send and receive will appear here.</p></div>}
               </div>
               <div ref={messagesEndRef} aria-hidden="true" />
             </div>
@@ -964,20 +878,24 @@ function App() {
                 <button type="button" className="composer-icon" onClick={() => fileInputRef.current?.click()} title="Attach a file" disabled={attachmentBusy}><Paperclip size={19} /></button>
                 <input value={message} onChange={event => setMessage(event.target.value)} placeholder={'Message ' + selected.name.split(' ')[0] + '…'} aria-label="Write a message" maxLength={5000} />
                 <button type="button" className={'composer-icon' + (showEmoji ? ' emoji-active' : '')} onClick={() => setShowEmoji(!showEmoji)} title="Emoji"><Smile size={20} /></button>
-                {!message.trim()
-                  ? <button type="button" className="composer-icon mic-icon" onClick={() => notify('Voice messages are not available yet.')} title="Voice message"><Mic size={19} /></button>
-                  : <button type="submit" className="send-button" disabled={sendBusy}><Send size={17} /></button>}
+                <button type="submit" className="send-button" disabled={!message.trim() || sendBusy}><Send size={17} /></button>
               </form>
               {attachmentBusy && <div className="upload-progress"><LoaderCircle size={13} className="spin" /> Uploading attachment…</div>}
             </div>
           </>
+        ) : !isLive ? (
+          <div className="welcome-panel">
+            <div className="welcome-art"><span className="welcome-orbit"><MessageCircle size={42} /></span><span className="welcome-dot dot-one" /><span className="welcome-dot dot-two" /></div>
+            <h2>Your conversations, in one place.</h2>
+            <p>Sign in or create an account to send messages and connect with Orbit members.</p>
+            <button className="primary-button" onClick={() => setActiveNav('Profile')}>Sign in or create account</button>
+          </div>
         ) : (
           <div className="welcome-panel">
             <div className="welcome-art"><span className="welcome-orbit"><MessageCircle size={42} /></span><span className="welcome-dot dot-one" /><span className="welcome-dot dot-two" /></div>
-            <h2>Keep your conversations close.</h2>
-            <p>{isLive ? 'Start a conversation with an Orbit member.' : 'Choose a sample chat or explore the interface.'}</p>
+            <h2>No conversation selected</h2>
+            <p>Choose an existing conversation or start a new one.</p>
             <button className="primary-button" onClick={openNewChat}><Plus size={17} /> New conversation</button>
-            <div className="welcome-foot"><ShieldCheck size={14} /> {isLive ? 'Connected to Orbit' : 'Preview mode · No account connected'}</div>
           </div>
         )}
       </main>
@@ -988,11 +906,6 @@ function App() {
           <div className="profile-card">
             <div className="profile-avatar-wrap"><Avatar person={selected} size="xl" />{selected.online && <span className="profile-online" />}</div>
             <h2>{selected.name}</h2><p>{selected.group ? 'Group conversation' : selected.status}</p>
-            <div className="profile-actions">
-              <button onClick={() => setCallModal('Audio call')}><Phone size={17} /><span>Audio</span></button>
-              <button onClick={() => setCallModal('Video call')}><Video size={17} /><span>Video</span></button>
-              <button onClick={() => notify('Profile details are shown here.')}><UserRound size={17} /><span>Profile</span></button>
-            </div>
           </div>
           <div className="detail-section"><div className="detail-title">ABOUT</div><p className="about-text">{selected.group ? 'A shared space for group conversations.' : selected.status || 'Orbit member'}</p></div>
           <div className="detail-section"><div className="detail-title">CHAT PREFERENCES</div>
@@ -1000,7 +913,7 @@ function App() {
             <button className="setting-row" onClick={togglePin}><span className="setting-icon"><Pin size={16} /></span><span>{isSelectedPinned ? 'Unpin chat' : 'Pin chat'}</span><span className="setting-arrow">›</span></button>
             <button className="setting-row" onClick={toggleArchive}><span className="setting-icon"><Archive size={16} /></span><span>{isSelectedArchived ? 'Unarchive chat' : 'Archive chat'}</span><span className="setting-arrow">›</span></button>
           </div>
-          <div className="details-bottom"><ShieldCheck size={14} /> {isLive ? 'Conversation access is member-based.' : 'Local preview data only.'}</div>
+          <div className="details-bottom"><ShieldCheck size={14} /> Conversation access is restricted to its members.</div>
         </aside>
       )}
 
@@ -1013,14 +926,12 @@ function App() {
               <button className={newChatMode === 'group' ? 'current' : ''} onClick={() => setNewChatMode('group')}><Users size={14} /> Group</button>
             </div>
             {newChatMode === 'group' && <label className="group-title-field">Group name <input value={groupTitle} onChange={event => setGroupTitle(event.target.value)} placeholder="Give your group a name" maxLength={80} /></label>}
-            <div className="search-box modal-search"><Search size={16} /><input value={newChatSearch} onChange={event => setNewChatSearch(event.target.value)} placeholder={isLive ? 'Search Orbit members' : 'Find a sample contact'} autoFocus /></div>
-            <p className="modal-subtitle">{newChatMode === 'group' ? 'Add at least one member to create a group.' : (isLive ? 'Choose a member to start a private conversation.' : 'Choose someone from the sample contact list.')}</p>
+            <div className="search-box modal-search"><Search size={16} /><input value={newChatSearch} onChange={event => setNewChatSearch(event.target.value)} placeholder="Search Orbit members" autoFocus /></div>
+            <p className="modal-subtitle">{newChatMode === 'group' ? 'Add at least one member to create a group.' : 'Choose a member to start a private conversation.'}</p>
             <div className="new-chat-list">
-              {(isLive ? newChatResults : people.filter(person => person.name.toLowerCase().includes(newChatSearch.toLowerCase()))).map(person => {
+              {newChatResults.map(person => {
                 const isChosen = groupMemberIds.map(String).includes(String(person.id));
-                const displayPerson = isLive
-                  ? { name: person.display_name, initials: initialsFor(person.display_name), color: colorFor(person.display_name), avatarUrl: person.avatar_url }
-                  : person;
+                const displayPerson = { name: person.display_name, initials: initialsFor(person.display_name), color: colorFor(person.display_name), avatarUrl: person.avatar_url };
                 return newChatMode === 'group' ? (
                   <button type="button" className={'new-chat-person' + (isChosen ? ' chosen' : '')} key={person.id} onClick={() => toggleGroupMember(person.id)} disabled={newChatLoading} aria-pressed={isChosen}>
                     <Avatar person={displayPerson} />
@@ -1036,67 +947,53 @@ function App() {
                 );
               })}
               {newChatLoading && <div className="modal-loading"><LoaderCircle size={19} className="spin" /> Searching…</div>}
-              {!newChatLoading && !(isLive ? newChatResults : people.filter(person => person.name.toLowerCase().includes(newChatSearch.toLowerCase()))).length && <div className="empty-search"><Users size={23} /><p>No people found</p><small>Try a different name.</small></div>}
+              {!newChatLoading && !newChatResults.length && <div className="empty-search"><Users size={23} /><p>{newChatSearch.trim() ? 'No people found' : 'No other members yet'}</p><small>{newChatSearch.trim() ? 'Try a different name or username.' : 'Other registered Orbit members will appear here.'}</small></div>}
             </div>
             {newChatMode === 'group' && <div className="group-create-footer"><span>{groupMemberIds.length} selected</span><button className="primary-button" onClick={createGroupChat} disabled={!groupMemberIds.length || newChatLoading}>{newChatLoading ? <LoaderCircle size={15} className="spin" /> : <Users size={15} />} Create group</button></div>}
           </div>
         </div>
       )}
 
-      {callModal && <div className="modal-backdrop" onClick={() => setCallModal('')}><div className="call-card" onClick={event => event.stopPropagation()}>
-        <div className="call-glow"><Avatar person={selected || { name: 'Orbit', initials: 'O', color: 'mint' }} size="xl" /></div>
-        <span className="eyebrow">{callModal.toUpperCase()} PREVIEW</span><h2>{selected?.name || 'Orbit'}</h2>
-        <p>Live audio and video calling are not connected yet.</p>
-        <div className="call-controls"><button onClick={() => notify('Microphone controls will be available with calling.')}><Mic size={19} /></button><button className="end-call" onClick={() => setCallModal('')}><Phone size={20} /></button><button onClick={() => notify('Camera controls will be available with calling.')}><Video size={19} /></button></div>
-      </div></div>}
 
       {toast && <div className="toast"><Check size={16} />{toast}</div>}
-      {!isLive && <div className="demo-label"><span /> DEMO MODE</div>}
     </div>
   );
 }
 
-function SectionPreview({ activeNav, notify, openCall }) {
+function SectionPreview({ activeNav }) {
   if (activeNav === 'Calls') {
-    const calls = [
-      ['Ava Mitchell', 'Today · 10:40 AM', 'incoming'],
-      ['Oliver James', 'Yesterday · 6:22 PM', 'outgoing'],
-      ['Mia Chen', 'Monday · 3:15 PM', 'missed']
-    ];
     return <div className="section-preview">
-      <div className="preview-intro"><span className="section-icon"><Phone size={20} /></span><div><h2>Calls</h2><p>Your recent call activity.</p></div></div>
-      {calls.map(([name, time, type]) => <div className="call-row" key={name}><Avatar person={people.find(person => person.name === name) || people[0]} /><div><strong>{name}</strong><small>{time}</small></div><span className={'call-type ' + type}>{type === 'missed' ? 'Missed' : type === 'incoming' ? 'Incoming' : 'Outgoing'}</span><button className="icon-button" onClick={() => openCall('Audio call')} title="Call"><PhoneCall size={17} /></button></div>)}
-      <div className="preview-footnote">Calling is a visual preview until a calling service is added.</div>
+      <div className="preview-intro"><span className="section-icon"><Phone size={20} /></span><div><h2>Calls</h2><p>Audio and video calling.</p></div></div>
+      <div className="feature-unavailable"><Phone size={26} /><strong>Calling is not available yet</strong><span>Orbit does not currently connect audio or video calls. No call history is shown until calling is implemented.</span></div>
     </div>;
   }
   if (activeNav === 'Notifications') {
     return <div className="section-preview">
-      <div className="preview-intro"><span className="section-icon"><Bell size={20} /></span><div><h2>Notifications</h2><p>Updates from your conversations.</p></div></div>
-      {[['Ava Mitchell', 'sent you a message', '2 min ago'], ['Design Buddies', 'shared a new update', '28 min ago'], ['Noah Williams', 'sent you photos', '1 hour ago']].map(([name, description, time]) => <div className="notification-row" key={name}><span className="notification-icon"><Bell size={16} /></span><div><strong>{name}</strong><p>{description}</p><small>{time}</small></div></div>)}
-      <div className="preview-footnote">Push notifications are not enabled in this release.</div>
+      <div className="preview-intro"><span className="section-icon"><Bell size={20} /></span><div><h2>Notifications</h2><p>Updates for your account.</p></div></div>
+      <div className="feature-unavailable"><Bell size={26} /><strong>Push notifications are not enabled</strong><span>New messages are available when you open Orbit. Browser and mobile push delivery is not configured.</span></div>
     </div>;
   }
   return <div className="section-preview" />;
 }
 
-function SettingsSection({ settingsTab, setSettingsTab, dark, setDark, notify }) {
+function SettingsSection({ settingsTab, setSettingsTab, dark, setDark }) {
   const tabs = ['Appearance', 'Notifications', 'Privacy', 'Storage'];
   return <div className="section-preview settings-preview">
-    <div className="preview-intro"><span className="section-icon"><Settings size={20} /></span><div><h2>Settings</h2><p>Personalize how Orbit works on this device.</p></div></div>
+    <div className="preview-intro"><span className="section-icon"><Settings size={20} /></span><div><h2>Settings</h2><p>Account and workspace preferences.</p></div></div>
     <div className="settings-layout">
       <div className="settings-tabs">{tabs.map(tab => <button key={tab} className={'settings-tab' + (settingsTab === tab ? ' current' : '')} onClick={() => setSettingsTab(tab)}>{tab}<span>›</span></button>)}</div>
       <div className="settings-content">
         <h3>{settingsTab}</h3>
         {settingsTab === 'Appearance' && <>
-          <p>Choose the theme used by your Orbit workspace.</p>
+          <p>Choose the theme used on this device.</p>
           <div className="theme-options">
             <button className={'theme-option' + (dark ? ' current' : '')} onClick={() => setDark(true)}><span className="theme-preview theme-dark"><Moon size={18} /></span><strong>Dark</strong><small>Default night view</small></button>
             <button className={'theme-option' + (!dark ? ' current' : '')} onClick={() => setDark(false)}><span className="theme-preview theme-light"><Sun size={18} /></span><strong>Light</strong><small>Bright workspace</small></button>
           </div>
         </>}
-        {settingsTab === 'Notifications' && <><p>Notification preferences are stored locally in this preview.</p><div className="settings-note"><Bell size={17} /><span>Per-chat mute controls are available from the conversation menu. Browser push notifications are not connected.</span></div></>}
-        {settingsTab === 'Privacy' && <><p>Understand what is active in this release.</p><div className="settings-note"><ShieldCheck size={17} /><span>{'Demo messages stay in this browser. Signed-in messages use your configured Orbit backend; end-to-end encryption is not implemented.'}</span></div></>}
-        {settingsTab === 'Storage' && <><p>Clear only the sample data saved in this browser.</p><button className="secondary-button" onClick={() => { Object.keys(localStorage).filter(key => key.startsWith('orbit.')).forEach(key => localStorage.removeItem(key)); notify('Local Orbit data cleared. Refresh to reset the demo.'); }}><Trash2 size={15} /> Clear local demo data</button></>}
+        {settingsTab === 'Notifications' && <><p>Message alerts and browser notifications.</p><div className="settings-note"><Bell size={17} /><span>Push notifications are not configured yet. You can still see new messages while Orbit is open.</span></div></>}
+        {settingsTab === 'Privacy' && <><p>How your conversations are protected.</p><div className="settings-note"><ShieldCheck size={17} /><span>Conversation data uses authenticated access and Row Level Security. End-to-end encryption is not implemented, so do not use Orbit for highly sensitive conversations.</span></div></>}
+        {settingsTab === 'Storage' && <><p>File sharing limits for this workspace.</p><div className="settings-note"><FileText size={17} /><span>Attachments are stored in a private bucket and can be up to 10 MB. Supported types: JPG, PNG, WebP, PDF and TXT.</span></div></>}
       </div>
     </div>
   </div>;
@@ -1113,10 +1010,9 @@ function AuthSection({
       <div className="auth-emblem"><CircleUserRound size={25} /></div>
       <span className="eyebrow">ACCOUNT SETUP</span>
       <h2>Connect your Orbit account</h2>
-      <p>The login and live messaging screens are ready. To activate accounts, connect the Supabase project using the setup guide.</p>
-      <div className="backend-status"><span className="status-dot offline" /> Backend not configured</div>
-      <a className="primary-button" href="https://github.com/serakib/messenger/blob/main/docs/FREE_HOSTING_SETUP.md" target="_blank" rel="noreferrer">Open setup guide <ArrowUpRight size={16} /></a>
-      <div className="auth-demo-note"><ShieldCheck size={15} /> You can still use the local demo without an account.</div>
+      <p>Account services are not configured for this deployment. Sign-in is required to use chats and member search.</p>
+      <div className="backend-status"><span className="status-dot offline" /> Backend unavailable</div>
+      <a className="primary-button" href="https://github.com/serakib/messenger/issues" target="_blank" rel="noreferrer">Report connection issue <ArrowUpRight size={16} /></a>
     </div>;
   }
   return <div className="auth-card">
