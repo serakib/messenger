@@ -6,12 +6,19 @@ const ALLOWED_ATTACHMENT_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'appl
 
 export async function listMyConversations() {
   const client = requireSupabase();
+  const { data: authData, error: authError } = await client.auth.getUser();
+  if (authError) throw authError;
+  if (!authData.user) throw new Error('Please sign in to view your conversations.');
+
   const { data, error } = await client
     .from('conversation_members')
     .select(`
       role,
       joined_at,
       last_read_at,
+      is_pinned,
+      is_muted,
+      is_archived,
       conversation:conversations (
         id, type, title, created_by, created_at, updated_at,
         members:conversation_members (
@@ -19,12 +26,12 @@ export async function listMyConversations() {
         )
       )
     `)
+    .eq('user_id', authData.user.id)
     .order('joined_at', { ascending: false })
-    .limit(50);
+    .limit(100);
   if (error) throw error;
 
-  const memberships = (data || []).filter(row => row.conversation);
-  return Promise.all(memberships.map(async row => {
+  return Promise.all((data || []).filter(row => row.conversation).map(async row => {
     const { data: latestRows, error: latestError } = await client
       .from('messages')
       .select('id, body, sender_id, created_at, attachment_path, attachment_name, attachment_mime, attachment_size')
@@ -36,9 +43,35 @@ export async function listMyConversations() {
       ...row.conversation,
       latest_message: latestRows?.[0] || null,
       myRole: row.role,
-      lastReadAt: row.last_read_at
+      lastReadAt: row.last_read_at,
+      is_pinned: row.is_pinned,
+      is_muted: row.is_muted,
+      is_archived: row.is_archived
     };
   }));
+}
+
+export async function updateConversationPreference(conversationId, updates) {
+  const allowed = {};
+  for (const key of ['is_pinned', 'is_muted', 'is_archived']) {
+    if (typeof updates?.[key] === 'boolean') allowed[key] = updates[key];
+  }
+  if (!Object.keys(allowed).length) throw new Error('No conversation preference was provided.');
+
+  const client = requireSupabase();
+  const { data: authData, error: authError } = await client.auth.getUser();
+  if (authError) throw authError;
+  if (!authData.user) throw new Error('Please sign in first.');
+
+  const { data, error } = await client
+    .from('conversation_members')
+    .update(allowed)
+    .eq('conversation_id', conversationId)
+    .eq('user_id', authData.user.id)
+    .select('conversation_id, is_pinned, is_muted, is_archived')
+    .single();
+  if (error) throw error;
+  return data;
 }
 
 export async function searchProfiles(search = '', limit = 40) {
