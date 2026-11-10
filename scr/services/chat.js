@@ -163,6 +163,24 @@ export function subscribeToMessages(conversationId, onMessage) {
   return () => client.removeChannel(channel);
 }
 
+export function subscribeToMyMessages(onMessage) {
+  const client = requireSupabase();
+  const channel = client
+    .channel('my-messages')
+    .on(
+      'postgres_changes',
+      {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'messages'
+      },
+      payload => onMessage(payload.new)
+    )
+    .subscribe();
+
+  return () => client.removeChannel(channel);
+}
+
 export async function uploadAttachment(conversationId, file) {
   if (!(file instanceof File)) throw new Error('Choose a file to upload.');
   if (file.size < 1) throw new Error('The selected file is empty.');
