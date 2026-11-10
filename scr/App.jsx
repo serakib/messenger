@@ -1144,7 +1144,7 @@ function AuthSection({
           </>
         ) : (
           <>
-            <label>6-digit verification code<div className="auth-input"><ShieldCheck size={16} /><input type="text" value={otpCode} onChange={event => setOtpCode(event.target.value.replace(/\\D/g, '').slice(0, 6))} placeholder="Enter SMS code" required inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]{6}" maxLength={6} /></div></label>
+            <label>6-digit verification code<div className="auth-input"><ShieldCheck size={16} /><input type="text" value={otpCode} onChange={event => setOtpCode(event.target.value.replace(/\D/g, '').slice(0, 6))} placeholder="Enter SMS code" required inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]{6}" maxLength={6} /></div></label>
             <p className="auth-field-note">Enter the code sent to {phone}. Check your SMS inbox.</p>
             <button type="button" className="secondary-button full-button" onClick={onResendOtp} disabled={busy}>Resend code</button>
             <button type="button" className="auth-back-link" onClick={() => { setOtpStage('phone'); setOtpCode(''); }}>Change phone number</button>
