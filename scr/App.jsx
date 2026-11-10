@@ -117,7 +117,7 @@ function App() {
           </button>)}
           {filteredPeople.length===0 && <div className="empty-search"><SearchX size={25}/><p>No conversations found</p><small>Try another name</small></div>}
         </div>
-        <div className="inbox-footer"><span className="secure-dot"/><span>Messages are private</span><ShieldCheck size={14}/></div>
+        <div className="inbox-footer"><span className="secure-dot"/><span>Demo messages only</span><ShieldCheck size={14}/></div>
       </> : <SectionPreview activeNav={activeNav} settingsTab={settingsTab} setSettingsTab={setSettingsTab} notify={notify} setActiveNav={setActiveNav}/>}
     </section>
 
@@ -142,7 +142,7 @@ function App() {
 
       <div className="conversation-topline"><span>Today</span><i/></div>
       <div className="messages-scroll" onClick={()=>activeMenu && setActiveMenu(false)}>
-        <div className="encryption-note"><ShieldCheck size={14}/> Messages and calls are end-to-end encrypted in this preview.</div>
+        <div className="encryption-note"><ShieldCheck size={14}/> This is a demo conversation. Do not share sensitive information.</div>
         <div className="message-stack">
           {currentMessages.map(m=><div key={m.id} className={`message-line ${m.from==='me'?'outgoing':'incoming'}`}>
             {m.from==='them' && <Avatar person={selected} size="xs"/>}
