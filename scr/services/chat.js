@@ -7,7 +7,7 @@ const ALLOWED_ATTACHMENT_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'appl
 export async function listMyConversations() {
   const { data, error } = await requireSupabase()
     .from('conversation_members')
-    .select(\`
+    .select(`
       role,
       joined_at,
       last_read_at,
@@ -18,7 +18,7 @@ export async function listMyConversations() {
         ),
         latest_message:messages (id, body, sender_id, created_at, attachment_path, attachment_name, attachment_mime, attachment_size)
       )
-    \`)
+    `)
     .order('joined_at', { ascending: false });
   if (error) throw error;
   return (data || [])
