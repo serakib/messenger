@@ -11,7 +11,7 @@ The app needs authentication, durable storage, a database and realtime updates. 
 1. Create a project at https://supabase.com/dashboard (Free plan is enough to start).
 2. Choose a strong database password and keep it private.
 3. Open **SQL Editor → New query**.
-4. Copy and run the complete file `supabase/migrations/0001_initial_schema.sql`.
+4. Run the SQL files in order in the Supabase SQL Editor:\n   - `supabase/migrations/0001_initial_schema.sql`\n   - `supabase/migrations/0002_message_attachments.sql`
 5. Open **Project Settings → API** and copy the Project URL and publishable/anon key.
 6. In GitHub, open **Settings → Secrets and variables → Actions → Variables** and add:
    - `VITE_SUPABASE_URL` = your Supabase Project URL
@@ -37,7 +37,7 @@ RLS is enabled. Do not disable it to make the app appear to work. Test with two 
 
 ## Current status
 
-The repository now includes a Supabase client, Auth helpers, and data-service functions for conversations, messages, realtime inserts, read positions and private attachments. The existing React screens are still a demo and are not yet connected to those services. Creating the Supabase project and running the migration are required before real login or messaging can work. The SQL is a starting schema and should receive a security review and tests before handling sensitive conversations.
+The repository now includes a Supabase client, Auth helpers, and data-service functions for conversations, messages, realtime inserts, read positions and private attachments. The existing React screens are still a demo and are not yet connected to those services. Creating the Supabase project and running the migration are required before real login or messaging can work. The SQL is a starting schema and should receive a security review and tests before handling sensitive conversations. The app does not implement end-to-end encryption, push notifications, or audio/video calling.
 
 ## Free-tier cautions
 
