@@ -5,9 +5,10 @@ const MAX_ATTACHMENT_BYTES = 10 * 1024 * 1024;
 const ALLOWED_ATTACHMENT_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf', 'text/plain'];
 
 export async function listMyConversations() {
-  const { data, error } = await requireSupabase()
+  const client = requireSupabase();
+  const { data, error } = await client
     .from('conversation_members')
-    .select(`
+    .select(\`
       role,
       joined_at,
       last_read_at,
@@ -15,15 +16,29 @@ export async function listMyConversations() {
         id, type, title, created_by, created_at, updated_at,
         members:conversation_members (
           user_id, role, profile:profiles (id, username, display_name, avatar_url)
-        ),
-        latest_message:messages (id, body, sender_id, created_at, attachment_path, attachment_name, attachment_mime, attachment_size)
+        )
       )
-    `)
-    .order('joined_at', { ascending: false });
+    \`)
+    .order('joined_at', { ascending: false })
+    .limit(50);
   if (error) throw error;
-  return (data || [])
-    .map(row => row.conversation ? { ...row.conversation, myRole: row.role, lastReadAt: row.last_read_at } : null)
-    .filter(Boolean);
+
+  const memberships = (data || []).filter(row => row.conversation);
+  return Promise.all(memberships.map(async row => {
+    const { data: latestRows, error: latestError } = await client
+      .from('messages')
+      .select('id, body, sender_id, created_at, attachment_path, attachment_name, attachment_mime, attachment_size')
+      .eq('conversation_id', row.conversation.id)
+      .order('created_at', { ascending: false })
+      .limit(1);
+    if (latestError) throw latestError;
+    return {
+      ...row.conversation,
+      latest_message: latestRows?.[0] || null,
+      myRole: row.role,
+      lastReadAt: row.last_read_at
+    };
+  }));
 }
 
 export async function searchProfiles(search = '', limit = 40) {
@@ -32,7 +47,7 @@ export async function searchProfiles(search = '', limit = 40) {
   if (authError) throw authError;
   if (!authData.user) throw new Error('Please sign in to find people.');
 
-  const clean = String(search).trim().replace(/[%_,()]/g, ' ').replace(/\s+/g, ' ').slice(0, 60);
+  const clean = String(search).trim().replace(/[^a-zA-Z0-9_ -]/g, ' ').replace(/\s+/g, ' ').slice(0, 60);
   let query = client
     .from('profiles')
     .select('id, username, display_name, avatar_url, bio')
