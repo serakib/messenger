@@ -165,6 +165,7 @@ export function subscribeToMessages(conversationId, onMessage) {
 
 export async function uploadAttachment(conversationId, file) {
   if (!(file instanceof File)) throw new Error('Choose a file to upload.');
+  if (file.size < 1) throw new Error('The selected file is empty.');
   if (file.size > MAX_ATTACHMENT_BYTES) throw new Error('Attachments must be 10 MB or smaller.');
   if (!ALLOWED_ATTACHMENT_TYPES.includes(file.type)) throw new Error('This file type is not supported.');
 
