@@ -97,18 +97,20 @@ function App() {
 
     <section className={`inbox-panel ${mobileChat ? 'inbox-mobile-hidden' : ''}`}>
       <div className="inbox-heading">
-        <div><div className="eyebrow">ORBIT MESSENGER</div><h1>{activeNav === 'Chats' ? 'Chats' : activeNav}</h1></div>
-        <button className="icon-button create-button" onClick={() => setShowNewChat(true)} aria-label="New chat"><Plus size={20}/></button>
+        <h1>{activeNav === 'Chats' ? 'Chats' : activeNav}</h1>
+        <div className="inbox-heading-actions">
+          <button className="icon-button" onClick={() => notify('Camera is a demo feature')} aria-label="Camera"><Camera size={20}/></button>
+          <button className="icon-button" onClick={() => setShowNewChat(true)} aria-label="New chat"><Plus size={21}/></button>
+          <button className="icon-button" onClick={() => notify('Chat menu opened')} aria-label="Menu"><MoreHorizontal size={21}/></button>
+        </div>
       </div>
       <div className="search-box"><Search size={17}/><input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search or start a new chat"/><kbd>⌘ K</kbd></div>
       <div className="inbox-filters"><button className="filter-chip selected">All <span>12</span></button><button className="filter-chip" onClick={()=>notify('Unread filter preview')}>Unread</button><button className="filter-chip" onClick={()=>notify('Groups filter preview')}>Groups</button></div>
       {activeNav === 'Chats' ? <>
-        <div className="section-caption">PINNED CHATS <Pin size={12}/></div>
-        <button className={`person-row ${selectedId===1?'chosen':''}`} onClick={()=>selectPerson(1)}>
-          <div className="avatar-wrap"><Avatar person={people[0]} showOnline/><span className="pin-mini"><Pin size={10}/></span></div>
-          <div className="person-copy"><div className="person-top"><strong>Ava Mitchell</strong><time>2m</time></div><div className="person-preview">That sounds like a plan ✨</div></div><span className="unread-badge">2</span>
+        <button className="archive-row" onClick={() => notify('Archived chats are empty in this preview')}>
+          <span className="archive-icon"><Archive size={18}/></span><strong>Archived</strong><span className="archive-count">1</span>
         </button>
-        <div className="section-caption recent-caption">ALL CHATS <span>{filteredPeople.length}</span></div>
+        <div className="section-caption recent-caption">ALL MESSAGES <span>{filteredPeople.length}</span></div>
         <div className="people-list">
           {filteredPeople.filter(p=>p.id!==1).map(p=><button key={p.id} className={`person-row ${selectedId===p.id?'chosen':''}`} onClick={()=>selectPerson(p.id)}>
             <div className="avatar-wrap"><Avatar person={p} showOnline/>{p.group && <span className="group-badge"><Users size={10}/></span>}</div>
@@ -140,7 +142,6 @@ function App() {
         </div>
       </header>
 
-      <div className="conversation-topline"><span>Today</span><i/></div>
       <div className="messages-scroll" onClick={()=>activeMenu && setActiveMenu(false)}>
         <div className="encryption-note"><ShieldCheck size={14}/> This is a demo conversation. Do not share sensitive information.</div>
         <div className="message-stack">
