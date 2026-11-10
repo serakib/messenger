@@ -20,18 +20,34 @@ The migrations create:
 - Persistent messages with membership-based Row Level Security
 - A private attachment bucket with a 10 MB per-file limit and MIME allow-list
 - Realtime message publication
+- Email/password Auth and Phone OTP UI integration (SMS provider is configured separately)
 - Private-schema security helpers, trigger-function permission restrictions, and foreign-key indexes
 
 RLS must remain enabled. Do not disable it to make the app appear to work.
 
-## One remaining dashboard configuration
+## Authentication configuration
+
+Email authentication is enabled by default in Supabase. Keep **Email** enabled under **Authentication → Sign In / Providers**.
 
 Open Supabase **Authentication → URL Configuration** and set:
 
 - **Site URL:** `https://serakib.github.io/messenger/`
 - **Redirect URLs:** add `https://serakib.github.io/messenger/`
 
-Then open **Authentication → Providers → Email** and confirm Email is enabled. Keep email confirmation enabled. For production email delivery, configure a trusted SMTP sender.
+Keep email confirmation enabled. For production email delivery, configure a trusted SMTP sender.
+
+### Optional phone-number login (SMS OTP)
+
+Orbit now offers both Email and Phone OTP on its account screen. Phone login uses a six-digit one-time code rather than a permanent phone password.
+
+To activate real SMS delivery:
+
+1. Open **Authentication → Sign In / Providers → Phone** in the Supabase Dashboard.
+2. Enable Phone sign-in.
+3. Configure an SMS provider supported by Supabase (for example, Twilio or Vonage) and enter its credentials in the Supabase Dashboard.
+4. Save the provider settings and test with a phone number you control, using international format such as `+8801XXXXXXXXX`.
+
+Supabase does not send production SMS without an SMS provider. SMS providers may charge per message. Keep provider credentials in Supabase's provider settings; never put them in GitHub, frontend code, or chat. Until this is configured, the Phone OTP form is present but SMS requests will fail with the provider/configuration error returned by Supabase.
 
 ## GitHub Pages configuration
 
