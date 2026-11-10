@@ -168,6 +168,11 @@ create policy "Owners can update conversations"
   using (public.is_conversation_creator(id))
   with check (public.is_conversation_creator(id));
 
+drop policy if exists "Creators can delete conversations" on public.conversations;
+create policy "Creators can delete conversations"
+  on public.conversations for delete to authenticated
+  using (public.is_conversation_creator(id));
+
 drop policy if exists "Members can view conversation members" on public.conversation_members;
 create policy "Members can view conversation members"
   on public.conversation_members for select to authenticated
@@ -219,12 +224,17 @@ create policy "Authors can delete their messages"
   on public.messages for delete to authenticated
   using (sender_id = (select auth.uid()));
 
-grant select, update on public.profiles to authenticated;
+grant select on public.profiles to authenticated;
+grant update (username, display_name, avatar_url, bio) on public.profiles to authenticated;
 grant select, insert on public.conversations to authenticated;
 grant update (title) on public.conversations to authenticated;
-grant select, insert, delete on public.conversation_members to authenticated;
+grant delete on public.conversations to authenticated;
+grant select, delete on public.conversation_members to authenticated;
+grant insert (conversation_id, user_id) on public.conversation_members to authenticated;
 grant update (last_read_at) on public.conversation_members to authenticated;
-grant select, insert, update, delete on public.messages to authenticated;
+grant select, delete on public.messages to authenticated;
+grant insert (conversation_id, sender_id, body) on public.messages to authenticated;
+grant update (body, edited_at, deleted_at) on public.messages to authenticated;
 
 -- Private attachment bucket. Store objects under <conversation-uuid>/<filename>.
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
