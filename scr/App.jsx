@@ -699,8 +699,8 @@ function App() {
             <button className="icon-button" onClick={openNewChat} aria-label="New chat" title="New chat"><MessageSquarePlus size={19} /></button>
             <button className={'icon-button' + (inboxMenu ? ' active' : '')} onClick={() => setInboxMenu(!inboxMenu)} aria-label="More inbox options" title="More"><MoreHorizontal size={20} /></button>
             {inboxMenu && <div className="dropdown-menu inbox-dropdown">
-              <button onClick={() => { if (isLive) { Promise.all(liveChats.map(item => markConversationRead(item.id))).then(() => setLiveChats(items => items.map(item => ({ ...item, unread: false })))).catch(() => notify('Could not mark every chat as read')); } else { setUnreadCounts({}); } notify('All chats marked as read'); setInboxMenu(false); }}><CheckCheck size={15} /> Mark all as read</button>
-              <button onClick={() => { setShowArchived(!showArchived); setActiveNav('Chats'); setInboxMenu(false); }}><Archive size={15} /> {showArchived ? 'Back to chats' : 'Open archived'}</button>
+              {isLive && <button onClick={() => { Promise.all(liveChats.map(item => markConversationRead(item.id))).then(() => setLiveChats(items => items.map(item => ({ ...item, unread: false })))).then(() => notify('All conversations marked as read')).catch(() => notify('Could not update read status')); setInboxMenu(false); }}><CheckCheck size={15} /> Mark all as read</button>}
+              {isLive && archivedCount > 0 && <button onClick={() => { setShowArchived(!showArchived); setActiveNav('Chats'); setInboxMenu(false); }}><Archive size={15} /> {showArchived ? 'Back to chats' : 'Open archived'}</button>}
               <button onClick={() => { setActiveNav('Settings'); setInboxMenu(false); }}><Settings size={15} /> Settings</button>
             </div>}
           </div>
@@ -1051,7 +1051,7 @@ function AuthSection({
       <button type="submit" className="primary-button full-button" disabled={busy}>{busy ? <LoaderCircle size={16} className="spin" /> : null}{method === 'phone' ? (otpStage === 'phone' ? 'Send verification code' : mode === 'signup' ? 'Verify & create account' : 'Verify & sign in') : (mode === 'signup' ? 'Create account' : 'Sign in')}</button>
     </form>
     <div className="auth-switch">{mode === 'signup' ? 'Already have an account?' : 'New to Orbit?'} <button onClick={() => setMode(mode === 'signup' ? 'signin' : 'signup')}>{mode === 'signup' ? 'Sign in' : 'Create account'}</button></div>
-    <div className="auth-demo-note"><ShieldCheck size={15} /> {method === 'phone' ? 'Phone sign-in uses a one-time SMS code. Your carrier may charge for SMS.' : 'Email confirmation may be required depending on your backend settings.'}</div>
+    <div className="auth-field-note auth-security-note"><ShieldCheck size={15} /> {method === 'phone' ? 'Phone sign-in uses a one-time SMS code. Your carrier may charge for SMS.' : 'Email confirmation may be required depending on your backend settings.'}</div>
   </div>;
 }
 
