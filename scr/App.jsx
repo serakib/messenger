@@ -15,7 +15,7 @@ import {
 } from './services/auth.js';
 import {
   listMyConversations, getMessages, sendMessage, createConversation,
-  markConversationRead, subscribeToMessages, searchProfiles,
+  markConversationRead, subscribeToMessages, subscribeToMyMessages, searchProfiles,
   sendAttachmentMessage, createAttachmentUrl
 } from './services/chat.js';
 
@@ -150,6 +150,7 @@ function App() {
   const [search, setSearch] = useState('');
   const [message, setMessage] = useState('');
   const [demoMessages, setDemoMessages] = useStoredState('orbit.demo.messages.v2', seedMessages);
+  const [demoChats, setDemoChats] = useStoredState('orbit.demo.chats.v1', people);
   const [dark, setDark] = useStoredState('orbit.theme.v2', true);
   const [profileName, setProfileName] = useStoredState('orbit.profile.name', 'Rakib Hasan');
   const [archivedIds, setArchivedIds] = useStoredState('orbit.archived.v1', []);
@@ -194,11 +195,13 @@ function App() {
   const searchInputRef = useRef(null);
   const fileInputRef = useRef(null);
   const toastTimerRef = useRef(null);
+  const selectedIdRef = useRef(selectedId);
+  selectedIdRef.current = selectedId;
 
   const isLive = Boolean(session?.user?.id);
   const currentUserId = session?.user?.id;
   const currentUserName = profileData?.display_name || session?.user?.user_metadata?.display_name || session?.user?.email?.split('@')[0] || 'Account';
-  const chatItems = isLive ? liveChats : people;
+  const chatItems = isLive ? liveChats : demoChats;
   const selected = chatItems.find(person => String(person.id) === String(selectedId)) || null;
 
   const notify = (text) => {
@@ -259,7 +262,7 @@ function App() {
           username: profile?.username || '',
           bio: profile?.bio || ''
         });
-        const mapped = conversations.map(item => mapConversation(item, currentUserId));
+        const mapped = conversations.map(item => mapConversation(item, currentUserId)).sort((a, b) => new Date(b.latestAt || 0) - new Date(a.latestAt || 0));
         setLiveChats(mapped);
         setSelectedId(previous => mapped.some(item => String(item.id) === String(previous)) ? previous : (mapped[0]?.id || null));
       })
@@ -317,6 +320,22 @@ function App() {
       created_at: item.created_at
     }));
   }, [selected, isLive, demoMessages, liveMessages, currentUserId]);
+
+  useEffect(() => {
+    if (!isLive) return undefined;
+    let unsubscribe = () => {};
+    try {
+      unsubscribe = subscribeToMyMessages(incoming => {
+        const isActiveConversation = String(selectedIdRef.current) === String(incoming.conversation_id);
+        setLiveChats(previous => previous.map(item => String(item.id) === String(incoming.conversation_id)
+          ? { ...item, preview: incoming.body || incoming.attachment_name || 'Attachment', time: formatRelative(incoming.created_at), latestAt: incoming.created_at, unread: incoming.sender_id !== currentUserId && !isActiveConversation }
+          : item).sort((a, b) => new Date(b.latestAt || 0) - new Date(a.latestAt || 0)));
+      });
+    } catch (error) {
+      setLiveError(error.message || 'Conversation updates could not start.');
+    }
+    return () => unsubscribe();
+  }, [isLive, currentUserId]);
 
   useEffect(() => {
     if (!isLive || !selectedId) return undefined;
@@ -392,7 +411,8 @@ function App() {
     result = [...result].sort((a, b) => {
       const aPinned = pins.includes(String(a.id)) ? 1 : 0;
       const bPinned = pins.includes(String(b.id)) ? 1 : 0;
-      return bPinned - aPinned;
+      if (aPinned !== bPinned) return bPinned - aPinned;
+      return new Date(b.latestAt || 0) - new Date(a.latestAt || 0);
     });
     return result;
   }, [chatItems, archivedIds, pinnedIds, filter, search, showArchived, isLive, unreadCounts]);
@@ -437,14 +457,19 @@ function App() {
       }
       return;
     }
+    const createdAt = new Date().toISOString();
     const item = {
       id: Date.now(),
       from: 'me',
       text,
-      time: new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }),
+      time: formatClock(createdAt),
+      created_at: createdAt,
       seen: false
     };
     setDemoMessages(previous => ({ ...previous, [selected.id]: [...(previous[selected.id] || []), item] }));
+    setDemoChats(previous => previous.map(person => String(person.id) === String(selected.id)
+      ? { ...person, preview: text, time: formatRelative(createdAt), latestAt: createdAt, unread: 0 }
+      : person));
     setMessage('');
     setShowEmoji(false);
   };
