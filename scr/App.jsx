@@ -163,6 +163,9 @@ function App() {
   const [mobileChat, setMobileChat] = useState(false);
   const [toast, setToast] = useState('');
   const [showNewChat, setShowNewChat] = useState(false);
+  const [newChatMode, setNewChatMode] = useState('direct');
+  const [groupTitle, setGroupTitle] = useState('');
+  const [groupMemberIds, setGroupMemberIds] = useState([]);
   const [newChatSearch, setNewChatSearch] = useState('');
   const [newChatResults, setNewChatResults] = useState([]);
   const [newChatLoading, setNewChatLoading] = useState(false);
@@ -507,8 +510,64 @@ function App() {
 
   const openNewChat = () => {
     setNewChatSearch('');
+    setNewChatMode('direct');
+    setGroupTitle('');
+    setGroupMemberIds([]);
     setShowNewChat(true);
     setInboxMenu(false);
+  };
+
+  const toggleGroupMember = id => setGroupMemberIds(previous =>
+    previous.map(String).includes(String(id))
+      ? previous.filter(value => String(value) !== String(id))
+      : [...previous, id]
+  );
+
+  const createGroupChat = async () => {
+    const memberIds = [...new Set(groupMemberIds)];
+    if (!memberIds.length || newChatLoading) return;
+    const title = groupTitle.trim().slice(0, 80) || 'New group';
+    if (!isLive) {
+      const createdAt = new Date().toISOString();
+      const group = {
+        id: 'demo-group-' + Date.now(),
+        name: title,
+        initials: initialsFor(title),
+        color: colorFor(title),
+        online: false,
+        unread: 0,
+        time: formatRelative(createdAt),
+        latestAt: createdAt,
+        preview: 'Group created',
+        status: (memberIds.length + 1) + ' members',
+        group: true
+      };
+      setDemoChats(previous => [group, ...previous]);
+      setDemoMessages(previous => ({ ...previous, [group.id]: [] }));
+      setShowNewChat(false);
+      setNewChatMode('direct');
+      selectChat(group);
+      notify('Group created on this device');
+      return;
+    }
+    setNewChatLoading(true);
+    try {
+      const conversation = await createConversation({ memberIds, title, type: 'group' });
+      const rows = await listMyConversations();
+      const mapped = rows.map(item => mapConversation(item, currentUserId)).sort((a, b) => new Date(b.latestAt || 0) - new Date(a.latestAt || 0));
+      setLiveChats(mapped);
+      const created = mapped.find(item => String(item.id) === String(conversation.id));
+      if (created) selectChat(created);
+      setShowNewChat(false);
+      setNewChatMode('direct');
+      setGroupMemberIds([]);
+      setGroupTitle('');
+      notify('Group conversation created');
+    } catch (error) {
+      notify(error.message || 'Could not create the group.');
+    } finally {
+      setNewChatLoading(false);
+    }
   };
 
   const startConversation = async person => {
@@ -897,19 +956,37 @@ function App() {
         <div className="modal-backdrop" onClick={() => setShowNewChat(false)}>
           <div className="modal-card new-chat-modal" onClick={event => event.stopPropagation()}>
             <div className="modal-title"><div><span className="eyebrow">START SOMETHING</span><h2>New conversation</h2></div><button className="icon-button" onClick={() => setShowNewChat(false)} aria-label="Close"><X size={19} /></button></div>
+            <div className="new-chat-modes" role="tablist" aria-label="Conversation type">
+              <button className={newChatMode === 'direct' ? 'current' : ''} onClick={() => setNewChatMode('direct')}><MessageCircle size={14} /> Direct</button>
+              <button className={newChatMode === 'group' ? 'current' : ''} onClick={() => setNewChatMode('group')}><Users size={14} /> Group</button>
+            </div>
+            {newChatMode === 'group' && <label className="group-title-field">Group name <input value={groupTitle} onChange={event => setGroupTitle(event.target.value)} placeholder="Give your group a name" maxLength={80} /></label>}
             <div className="search-box modal-search"><Search size={16} /><input value={newChatSearch} onChange={event => setNewChatSearch(event.target.value)} placeholder={isLive ? 'Search Orbit members' : 'Find a sample contact'} autoFocus /></div>
-            <p className="modal-subtitle">{isLive ? 'Choose a member to start a private conversation.' : 'Choose someone from the sample contact list.'}</p>
+            <p className="modal-subtitle">{newChatMode === 'group' ? 'Select two or more people to create a group.' : (isLive ? 'Choose a member to start a private conversation.' : 'Choose someone from the sample contact list.')}</p>
             <div className="new-chat-list">
-              {(isLive ? newChatResults : people.filter(person => person.name.toLowerCase().includes(newChatSearch.toLowerCase()))).map(person => (
-                <button className="new-chat-person" key={person.id} onClick={() => startConversation(person)} disabled={newChatLoading}>
-                  <Avatar person={isLive ? { name: person.display_name, initials: initialsFor(person.display_name), color: colorFor(person.display_name), avatarUrl: person.avatar_url } : person} />
-                  <span><strong>{person.display_name || person.name}</strong><small>{person.username ? '@' + person.username : person.status}</small></span>
-                  <ArrowUpRight size={17} />
-                </button>
-              ))}
+              {(isLive ? newChatResults : people.filter(person => person.name.toLowerCase().includes(newChatSearch.toLowerCase()))).map(person => {
+                const isChosen = groupMemberIds.map(String).includes(String(person.id));
+                const displayPerson = isLive
+                  ? { name: person.display_name, initials: initialsFor(person.display_name), color: colorFor(person.display_name), avatarUrl: person.avatar_url }
+                  : person;
+                return newChatMode === 'group' ? (
+                  <button type="button" className={'new-chat-person' + (isChosen ? ' chosen' : '')} key={person.id} onClick={() => toggleGroupMember(person.id)} disabled={newChatLoading} aria-pressed={isChosen}>
+                    <Avatar person={displayPerson} />
+                    <span><strong>{person.display_name || person.name}</strong><small>{person.username ? '@' + person.username : person.status}</small></span>
+                    <span className={'member-check' + (isChosen ? ' checked' : '')}>{isChosen ? <Check size={13} /> : null}</span>
+                  </button>
+                ) : (
+                  <button className="new-chat-person" key={person.id} onClick={() => startConversation(person)} disabled={newChatLoading}>
+                    <Avatar person={displayPerson} />
+                    <span><strong>{person.display_name || person.name}</strong><small>{person.username ? '@' + person.username : person.status}</small></span>
+                    <ArrowUpRight size={17} />
+                  </button>
+                );
+              })}
               {newChatLoading && <div className="modal-loading"><LoaderCircle size={19} className="spin" /> Searching…</div>}
               {!newChatLoading && !(isLive ? newChatResults : people.filter(person => person.name.toLowerCase().includes(newChatSearch.toLowerCase()))).length && <div className="empty-search"><Users size={23} /><p>No people found</p><small>Try a different name.</small></div>}
             </div>
+            {newChatMode === 'group' && <div className="group-create-footer"><span>{groupMemberIds.length} selected</span><button className="primary-button" onClick={createGroupChat} disabled={!groupMemberIds.length || newChatLoading}>{newChatLoading ? <LoaderCircle size={15} className="spin" /> : <Users size={15} />} Create group</button></div>}
           </div>
         </div>
       )}
