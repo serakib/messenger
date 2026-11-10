@@ -1129,7 +1129,7 @@ function AuthSection({
       <button type="button" role="tab" aria-selected={method === 'phone'} className={method === 'phone' ? 'active' : ''} onClick={() => setMethod('phone')}><Phone size={14} /> Phone OTP</button>
     </div>
     <form className="auth-form" onSubmit={onSubmit}>
-      {mode === 'signup' && <>
+      {mode === 'signup' && (method === 'email' || otpStage === 'phone') && <>
         <label>Display name<div className="auth-input"><UserRound size={16} /><input value={displayName} onChange={event => setDisplayName(event.target.value)} placeholder="Your name" required maxLength={50} /></div></label>
         <label>Username<div className="auth-input"><span>@</span><input value={username} onChange={event => setUsername(event.target.value)} placeholder="your_username" minLength={3} maxLength={24} pattern="[A-Za-z0-9_]{3,24}" required /></div></label>
       </>}
