@@ -55,7 +55,7 @@ function App() {
   const [search, setSearch] = useState('');
   const [message, setMessage] = useState('');
   const [messages, setMessages] = useState(seedMessages);
-  const [showProfile, setShowProfile] = useState(true);
+  const [showProfile, setShowProfile] = useState(false);
   const [mobileChat, setMobileChat] = useState(false);
   const [dark, setDark] = useState(false);
   const [toast, setToast] = useState('');
@@ -97,18 +97,18 @@ function App() {
 
     <section className={`inbox-panel ${mobileChat ? 'inbox-mobile-hidden' : ''}`}>
       <div className="inbox-heading">
-        <div><div className="eyebrow">YOUR SPACE</div><h1>{activeNav === 'Chats' ? 'Messages' : activeNav}</h1></div>
+        <div><div className="eyebrow">ORBIT MESSENGER</div><h1>{activeNav === 'Chats' ? 'Chats' : activeNav}</h1></div>
         <button className="icon-button create-button" onClick={() => setShowNewChat(true)} aria-label="New chat"><Plus size={20}/></button>
       </div>
-      <div className="search-box"><Search size={17}/><input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search conversations"/><kbd>⌘ K</kbd></div>
+      <div className="search-box"><Search size={17}/><input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search or start a new chat"/><kbd>⌘ K</kbd></div>
       <div className="inbox-filters"><button className="filter-chip selected">All <span>12</span></button><button className="filter-chip" onClick={()=>notify('Unread filter preview')}>Unread</button><button className="filter-chip" onClick={()=>notify('Groups filter preview')}>Groups</button></div>
       {activeNav === 'Chats' ? <>
-        <div className="section-caption">PINNED <Pin size={12}/></div>
+        <div className="section-caption">PINNED CHATS <Pin size={12}/></div>
         <button className={`person-row ${selectedId===1?'chosen':''}`} onClick={()=>selectPerson(1)}>
           <div className="avatar-wrap"><Avatar person={people[0]} showOnline/><span className="pin-mini"><Pin size={10}/></span></div>
           <div className="person-copy"><div className="person-top"><strong>Ava Mitchell</strong><time>2m</time></div><div className="person-preview">That sounds like a plan ✨</div></div><span className="unread-badge">2</span>
         </button>
-        <div className="section-caption recent-caption">ALL MESSAGES <span>{filteredPeople.length}</span></div>
+        <div className="section-caption recent-caption">ALL CHATS <span>{filteredPeople.length}</span></div>
         <div className="people-list">
           {filteredPeople.filter(p=>p.id!==1).map(p=><button key={p.id} className={`person-row ${selectedId===p.id?'chosen':''}`} onClick={()=>selectPerson(p.id)}>
             <div className="avatar-wrap"><Avatar person={p} showOnline/>{p.group && <span className="group-badge"><Users size={10}/></span>}</div>
