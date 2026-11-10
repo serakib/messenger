@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Search, MessageCircle, Users, Phone, Bell, Settings, UserRound,
   Plus, MoreHorizontal, Paperclip, Smile, Image as ImageIcon, Mic, Send,
-  CheckCheck, Video, PhoneCall, ChevronLeft, ChevronDown, Pin, Archive, BellOff,
+  CheckCheck, Video, PhoneCall, ChevronLeft, ChevronDown, Pin, Archive, BellOff, Star,
   ShieldCheck, Palette, LogOut, Trash2, X, ArrowUpRight, Sparkles,
   FileText, CircleHelp, SlidersHorizontal, Moon, Sun, Check, Camera,
   SearchX, Menu, CircleUserRound, Filter, MessageSquarePlus, LoaderCircle,
@@ -96,6 +96,7 @@ function mapConversation(conversation, userId) {
     status: conversation.type === 'group' ? members.length + ' members' : 'Member',
     group: conversation.type === 'group',
     is_pinned: Boolean(conversation.is_pinned),
+    is_favorite: Boolean(conversation.is_favorite),
     is_muted: Boolean(conversation.is_muted),
     is_archived: Boolean(conversation.is_archived),
     members: members.map(member => {
@@ -424,7 +425,7 @@ function App() {
         if (Boolean(person.is_archived) !== showArchived) return false;
         if (filter === 'unread' && !person.unread) return false;
         if (filter === 'groups' && !person.group) return false;
-        if (filter === 'favourites' && !person.is_pinned) return false;
+        if (filter === 'favourites' && !person.is_favorite) return false;
         if (query && !(person.name.toLowerCase().includes(query) || String(person.preview || '').toLowerCase().includes(query))) return false;
         return true;
       })
@@ -491,6 +492,7 @@ function App() {
   };
 
   const togglePin = () => updatePreference('is_pinned', value => value ? 'Chat pinned' : 'Chat unpinned');
+  const toggleFavorite = () => updatePreference('is_favorite', value => value ? 'Added to Favourites' : 'Removed from Favourites');
   const toggleMute = () => updatePreference('is_muted', value => value ? 'Notifications muted' : 'Notifications unmuted');
   const toggleArchive = () => updatePreference('is_archived', value => value ? 'Chat archived' : 'Chat restored');
 
@@ -698,6 +700,7 @@ function App() {
   const visiblePeople = livePeople;
   const unreadTotal = liveChats.filter(person => person.unread).length;
   const isSelectedPinned = Boolean(selected?.is_pinned);
+  const isSelectedFavorite = Boolean(selected?.is_favorite);
   const isSelectedMuted = Boolean(selected?.is_muted);
   const isSelectedArchived = Boolean(selected?.is_archived);
 
@@ -884,11 +887,12 @@ function App() {
               {showChatSearch && <div className="chat-header-search"><Search size={16} /><input value={chatSearch} onChange={event => setChatSearch(event.target.value)} placeholder="Search loaded messages" autoFocus /><button onClick={() => { setChatSearch(''); setShowChatSearch(false); }} aria-label="Close search"><X size={15} /></button></div>}
               <div className="header-actions">
                 <button className="icon-button" disabled title="Audio and video calling are not available yet"><Video size={19} /></button>
-                <button className="icon-button" onClick={() => setShowChatSearch(!showChatSearch)} title="Search loaded messages" aria-label="Search messages"><Search size={19} /></button>
+                <button className="icon-button" onClick={() => { if (showChatSearch) setChatSearch(''); setShowChatSearch(!showChatSearch); }} title="Search loaded messages" aria-label="Search messages"><Search size={19} /></button>
                 <button className={'icon-button' + (showDetails ? ' tinted' : '')} onClick={() => setShowDetails(!showDetails)} title="Contact details" aria-label="Contact details"><SlidersHorizontal size={18} /></button>
                 <button className="icon-button" onClick={() => setActiveMenu(!activeMenu)} title="More options" aria-label="More chat options"><MoreVertical size={19} /></button>
                 {activeMenu && <div className="dropdown-menu chat-dropdown">
                   <button onClick={togglePin}><Pin size={15} /> {isSelectedPinned ? 'Unpin chat' : 'Pin chat'}</button>
+                  <button onClick={toggleFavorite}><Star size={15} /> {isSelectedFavorite ? 'Remove from Favourites' : 'Add to Favourites'}</button>
                   <button onClick={toggleMute}><BellOff size={15} /> {isSelectedMuted ? 'Unmute notifications' : 'Mute notifications'}</button>
                   <button onClick={toggleArchive}><Archive size={15} /> {isSelectedArchived ? 'Unarchive chat' : 'Archive chat'}</button>
                   <div className="dropdown-divider" />
@@ -963,6 +967,7 @@ function App() {
           <div className="detail-section"><div className="detail-title">CHAT PREFERENCES</div>
             <button className="setting-row" onClick={toggleMute}><span className="setting-icon"><BellOff size={16} /></span><span>{isSelectedMuted ? 'Unmute notifications' : 'Mute notifications'}</span><span className="setting-value">{isSelectedMuted ? 'Off' : 'On'}</span></button>
             <button className="setting-row" onClick={togglePin}><span className="setting-icon"><Pin size={16} /></span><span>{isSelectedPinned ? 'Unpin chat' : 'Pin chat'}</span><span className="setting-arrow">›</span></button>
+            <button className="setting-row" onClick={toggleFavorite}><span className="setting-icon"><Star size={16} /></span><span>{isSelectedFavorite ? 'Remove from Favourites' : 'Add to Favourites'}</span><span className="setting-arrow">›</span></button>
             <button className="setting-row" onClick={toggleArchive}><span className="setting-icon"><Archive size={16} /></span><span>{isSelectedArchived ? 'Unarchive chat' : 'Archive chat'}</span><span className="setting-arrow">›</span></button>
           </div>
           <div className="details-bottom"><ShieldCheck size={14} /> Conversation access is restricted to its members.</div>
