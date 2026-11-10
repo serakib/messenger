@@ -28,7 +28,7 @@ The repository includes the SQL schema, Supabase client, Auth helpers and chat s
 1. Create a Supabase project.
 2. Run `supabase/migrations/0001_initial_schema.sql`.
 3. Run `supabase/migrations/0002_message_attachments.sql`.
-4. Add `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` as GitHub Actions repository Variables. Use the Supabase `sb_publishable_...` key, never a secret/service-role key.
+4. Add `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` as GitHub Actions repository Variables. Use the Supabase `sb_publishable_...` key, never a secret/service-role key.\n5. Run **Actions → Build and deploy Orbit to GitHub Pages → Run workflow** so the new variables are included in the deployed build.
 5. Set the Supabase Auth Site URL and Redirect URL to `https://serakib.github.io/messenger/`.
 
 See [the complete setup guide](docs/FREE_HOSTING_SETUP.md).
@@ -41,7 +41,7 @@ Never put a Supabase service-role key in browser code or GitHub Pages.
 - Browser push notifications
 - End-to-end encryption
 - Typing indicators and online presence
-- Group creation and group administration
+- Group administration
 - Message editing/deletion, reactions and reply threads
 - A production moderation/reporting workflow
 
