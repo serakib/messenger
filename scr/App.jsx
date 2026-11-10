@@ -11,7 +11,7 @@ import {
 import { isSupabaseConfigured } from './lib/supabase.js';
 import {
   signIn, signUp, signOut, getCurrentSession, onAuthStateChange,
-  getMyProfile, updateMyProfile
+  requestPhoneOtp, verifyPhoneOtp, getMyProfile, updateMyProfile
 } from './services/auth.js';
 import {
   listMyConversations, getMessages, sendMessage, createConversation,
@@ -176,7 +176,11 @@ function App() {
   const [callModal, setCallModal] = useState('');
   const [settingsTab, setSettingsTab] = useState('Appearance');
   const [authMode, setAuthMode] = useState('signin');
+  const [authMethod, setAuthMethod] = useState('email');
   const [authEmail, setAuthEmail] = useState('');
+  const [authPhone, setAuthPhone] = useState('');
+  const [phoneOtpCode, setPhoneOtpCode] = useState('');
+  const [phoneOtpStage, setPhoneOtpStage] = useState('phone');
   const [authPassword, setAuthPassword] = useState('');
   const [authUsername, setAuthUsername] = useState('');
   const [authDisplayName, setAuthDisplayName] = useState('');
@@ -643,7 +647,26 @@ function App() {
     setAuthBusy(true);
     setAuthError('');
     try {
-      if (authMode === 'signup') {
+      if (authMethod === 'phone') {
+        if (phoneOtpStage === 'phone') {
+          await requestPhoneOtp({
+            phone: authPhone,
+            shouldCreateUser: authMode === 'signup',
+            username: authUsername,
+            displayName: authDisplayName
+          });
+          setPhoneOtpStage('code');
+          setPhoneOtpCode('');
+          notify('Verification code sent. Check your SMS.');
+        } else {
+          const result = await verifyPhoneOtp({ phone: authPhone, token: phoneOtpCode });
+          if (!result.session) throw new Error('Phone verification did not return a session. Please try again.');
+          setSession(result.session);
+          setPhoneOtpStage('phone');
+          setPhoneOtpCode('');
+          notify(authMode === 'signup' ? 'Your phone account is ready' : 'Signed in successfully');
+        }
+      } else if (authMode === 'signup') {
         const result = await signUp({
           email: authEmail,
           password: authPassword,
@@ -665,6 +688,25 @@ function App() {
       setAuthPassword('');
     } catch (error) {
       setAuthError(error.message || 'Authentication failed. Please try again.');
+    } finally {
+      setAuthBusy(false);
+    }
+  };
+
+  const handleResendPhoneOtp = async () => {
+    setAuthBusy(true);
+    setAuthError('');
+    try {
+      await requestPhoneOtp({
+        phone: authPhone,
+        shouldCreateUser: authMode === 'signup',
+        username: authUsername,
+        displayName: authDisplayName
+      });
+      setPhoneOtpCode('');
+      notify('A new verification code has been sent.');
+    } catch (error) {
+      setAuthError(error.message || 'Could not resend the verification code.');
     } finally {
       setAuthBusy(false);
     }
@@ -817,7 +859,7 @@ function App() {
               <>
                 <div className="profile-cover" />
                 <Avatar person={{ name: currentUserName, initials: initialsFor(currentUserName), color: 'purple' }} size="xl" />
-                <h2>{currentUserName}</h2><p>{session.user.email}</p>
+                <h2>{currentUserName}</h2><p>{session.user.email || session.user.phone || ''}</p>
                 <span className="profile-status"><span className="status-dot" /> Signed in</span>
                 <div className="account-card">
                   {profileEdit ? (
@@ -841,7 +883,16 @@ function App() {
               <AuthSection
                 configured={isSupabaseConfigured}
                 mode={authMode}
-                setMode={mode => { setAuthMode(mode); setAuthError(''); }}
+                setMode={mode => { setAuthMode(mode); setPhoneOtpStage('phone'); setPhoneOtpCode(''); setAuthError(''); }}
+                method={authMethod}
+                setMethod={method => { setAuthMethod(method); setPhoneOtpStage('phone'); setPhoneOtpCode(''); setAuthError(''); }}
+                phone={authPhone}
+                setPhone={setAuthPhone}
+                otpCode={phoneOtpCode}
+                setOtpCode={setPhoneOtpCode}
+                otpStage={phoneOtpStage}
+                setOtpStage={setPhoneOtpStage}
+                onResendOtp={handleResendPhoneOtp}
                 email={authEmail}
                 setEmail={setAuthEmail}
                 password={authPassword}
@@ -1051,7 +1102,12 @@ function SettingsSection({ settingsTab, setSettingsTab, dark, setDark, notify })
   </div>;
 }
 
-function AuthSection({ configured, mode, setMode, email, setEmail, password, setPassword, username, setUsername, displayName, setDisplayName, busy, error, onSubmit }) {
+function AuthSection({
+  configured, mode, setMode, method, setMethod,
+  phone, setPhone, otpCode, setOtpCode, otpStage, onResendOtp,
+  email, setEmail, password, setPassword, username, setUsername,
+  displayName, setDisplayName, busy, error, onSubmit
+}) {
   if (!configured) {
     return <div className="auth-card">
       <div className="auth-emblem"><CircleUserRound size={25} /></div>
@@ -1068,18 +1124,38 @@ function AuthSection({ configured, mode, setMode, email, setEmail, password, set
     <span className="eyebrow">ORBIT ACCOUNT</span>
     <h2>{mode === 'signup' ? 'Create your account' : 'Welcome back'}</h2>
     <p>{mode === 'signup' ? 'Join Orbit and start talking to people.' : 'Sign in to sync your conversations.'}</p>
+    <div className="auth-method-switch" role="tablist" aria-label="Choose sign-in method">
+      <button type="button" role="tab" aria-selected={method === 'email'} className={method === 'email' ? 'active' : ''} onClick={() => setMethod('email')}><Mail size={14} /> Email</button>
+      <button type="button" role="tab" aria-selected={method === 'phone'} className={method === 'phone' ? 'active' : ''} onClick={() => setMethod('phone')}><Phone size={14} /> Phone OTP</button>
+    </div>
     <form className="auth-form" onSubmit={onSubmit}>
       {mode === 'signup' && <>
         <label>Display name<div className="auth-input"><UserRound size={16} /><input value={displayName} onChange={event => setDisplayName(event.target.value)} placeholder="Your name" required maxLength={50} /></div></label>
         <label>Username<div className="auth-input"><span>@</span><input value={username} onChange={event => setUsername(event.target.value)} placeholder="your_username" minLength={3} maxLength={24} pattern="[A-Za-z0-9_]{3,24}" required /></div></label>
       </>}
-      <label>Email address<div className="auth-input"><Mail size={16} /><input type="email" value={email} onChange={event => setEmail(event.target.value)} placeholder="you@example.com" required autoComplete="email" /></div></label>
-      <label>Password<div className="auth-input"><Lock size={16} /><input type="password" value={password} onChange={event => setPassword(event.target.value)} placeholder="At least 8 characters" required minLength={8} autoComplete={mode === 'signup' ? 'new-password' : 'current-password'} /></div></label>
+      {method === 'email' ? <>
+        <label>Email address<div className="auth-input"><Mail size={16} /><input type="email" value={email} onChange={event => setEmail(event.target.value)} placeholder="you@example.com" required autoComplete="email" /></div></label>
+        <label>Password<div className="auth-input"><Lock size={16} /><input type="password" value={password} onChange={event => setPassword(event.target.value)} placeholder="At least 8 characters" required minLength={8} autoComplete={mode === 'signup' ? 'new-password' : 'current-password'} /></div></label>
+      </> : <>
+        {otpStage === 'phone' ? (
+          <>
+            <label>Mobile number<div className="auth-input"><Phone size={16} /><input type="tel" value={phone} onChange={event => setPhone(event.target.value)} placeholder="+8801XXXXXXXXX" required autoComplete="tel" inputMode="tel" /></div></label>
+            <p className="auth-field-note">Include your country code, for example +880 for Bangladesh.</p>
+          </>
+        ) : (
+          <>
+            <label>6-digit verification code<div className="auth-input"><ShieldCheck size={16} /><input type="text" value={otpCode} onChange={event => setOtpCode(event.target.value.replace(/\\D/g, '').slice(0, 6))} placeholder="Enter SMS code" required inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]{6}" maxLength={6} /></div></label>
+            <p className="auth-field-note">Enter the code sent to {phone}. Check your SMS inbox.</p>
+            <button type="button" className="secondary-button full-button" onClick={onResendOtp} disabled={busy}>Resend code</button>
+            <button type="button" className="auth-back-link" onClick={() => { setOtpStage('phone'); setOtpCode(''); }}>Change phone number</button>
+          </>
+        )}
+      </>}
       {error && <div className="inline-error">{error}</div>}
-      <button type="submit" className="primary-button full-button" disabled={busy}>{busy ? <LoaderCircle size={16} className="spin" /> : null}{mode === 'signup' ? 'Create account' : 'Sign in'}</button>
+      <button type="submit" className="primary-button full-button" disabled={busy}>{busy ? <LoaderCircle size={16} className="spin" /> : null}{method === 'phone' ? (otpStage === 'phone' ? 'Send verification code' : mode === 'signup' ? 'Verify & create account' : 'Verify & sign in') : (mode === 'signup' ? 'Create account' : 'Sign in')}</button>
     </form>
     <div className="auth-switch">{mode === 'signup' ? 'Already have an account?' : 'New to Orbit?'} <button onClick={() => setMode(mode === 'signup' ? 'signin' : 'signup')}>{mode === 'signup' ? 'Sign in' : 'Create account'}</button></div>
-    <div className="auth-demo-note"><ShieldCheck size={15} /> Email confirmation may be required depending on your backend settings.</div>
+    <div className="auth-demo-note"><ShieldCheck size={15} /> {method === 'phone' ? 'Phone sign-in uses a one-time SMS code. Your carrier may charge for SMS.' : 'Email confirmation may be required depending on your backend settings.'}</div>
   </div>;
 }
 
