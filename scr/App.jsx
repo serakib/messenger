@@ -192,6 +192,19 @@ function App() {
   }, []);
 
   useEffect(() => {
+    const obsoleteKeys = [
+      'orbit.demo.messages.v2',
+      'orbit.demo.chats.v1',
+      'orbit.profile.name',
+      'orbit.archived.v1',
+      'orbit.pinned.v1',
+      'orbit.muted.v1',
+      'orbit.unread.v1'
+    ];
+    obsoleteKeys.forEach(key => window.localStorage.removeItem(key));
+  }, []);
+
+  useEffect(() => {
     if (!isSupabaseConfigured) {
       setAuthReady(true);
       return undefined;
