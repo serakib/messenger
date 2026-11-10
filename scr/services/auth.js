@@ -82,8 +82,8 @@ export async function updateMyProfile(updates) {
 
 
 function normalizePhone(phone) {
-  const normalized = String(phone || '').trim().replace(/[\\s().-]/g, '');
-  if (!/^\\+[1-9]\\d{7,14}$/.test(normalized)) {
+  const normalized = String(phone || '').trim().replace(/[\s().-]/g, '');
+  if (!/^\+[1-9]\d{7,14}$/.test(normalized)) {
     throw new Error('Enter a valid phone number with country code, for example +8801XXXXXXXXX.');
   }
   return normalized;
@@ -108,8 +108,8 @@ export async function requestPhoneOtp({ phone, shouldCreateUser = false, usernam
 
 export async function verifyPhoneOtp({ phone, token }) {
   const normalizedPhone = normalizePhone(phone);
-  const cleanToken = String(token || '').replace(/\\D/g, '');
-  if (!/^\\d{6}$/.test(cleanToken)) {
+  const cleanToken = String(token || '').replace(/\D/g, '');
+  if (!/^\d{6}$/.test(cleanToken)) {
     throw new Error('Enter the 6-digit verification code sent to your phone.');
   }
   const { data, error } = await requireSupabase().auth.verifyOtp({
