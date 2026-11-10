@@ -16,7 +16,7 @@ The app is built with Vite and deployed to GitHub Pages from the `main` branch.
 - Working local pin, mute and archive controls
 - Local demo message history persisted in the browser
 - Account sign-up/sign-in UI
-- Supabase profile discovery and direct conversations when configured
+- Supabase profile discovery, direct conversations and group conversations when configured
 - Supabase message history and Realtime message inserts
 - Private attachment upload and signed download links (10 MB maximum)
 - Contact details, profile editing, settings, keyboard shortcuts and responsive navigation
