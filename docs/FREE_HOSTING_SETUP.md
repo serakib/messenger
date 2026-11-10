@@ -12,12 +12,12 @@ The app needs authentication, durable storage, a database and realtime updates. 
 2. Choose a strong database password and keep it private.
 3. Open **SQL Editor → New query**.
 4. Run the SQL files in order in the Supabase SQL Editor:\n   - `supabase/migrations/0001_initial_schema.sql`\n   - `supabase/migrations/0002_message_attachments.sql`
-5. Open **Project Settings → API** and copy the Project URL and publishable/anon key.
+5. Open **Project Settings → API Keys** (or the project's **Connect** dialog) and copy the **Project URL** and **Publishable key** (`sb_publishable_...`).
 6. In GitHub, open **Settings → Secrets and variables → Actions → Variables** and add:
    - `VITE_SUPABASE_URL` = your Supabase Project URL
-   - `VITE_SUPABASE_ANON_KEY` = your publishable/anon key
+   - `VITE_SUPABASE_PUBLISHABLE_KEY` = your publishable key (`sb_publishable_...`)
 
-   These are public client configuration values, not service-role secrets. Never add a service-role key to frontend code or GitHub Pages.
+   These are public client configuration values. The publishable key is designed for browser apps and is constrained by the database grants and Row Level Security policies. Never use a `sb_secret_...` key, `service_role` key, or database password in this frontend or in GitHub Pages.
 7. In Supabase **Authentication → URL Configuration**, set the Site URL to:
    `https://serakib.github.io/messenger/`
    Add the same URL to the allowed Redirect URLs.
