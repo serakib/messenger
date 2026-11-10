@@ -8,7 +8,7 @@ export async function listMyConversations() {
   const client = requireSupabase();
   const { data, error } = await client
     .from('conversation_members')
-    .select(\`
+    .select(`
       role,
       joined_at,
       last_read_at,
@@ -18,7 +18,7 @@ export async function listMyConversations() {
           user_id, role, profile:profiles (id, username, display_name, avatar_url)
         )
       )
-    \`)
+    `)
     .order('joined_at', { ascending: false })
     .limit(50);
   if (error) throw error;
